@@ -50,7 +50,15 @@ def check(boardd):
     return True
 
 def randomgenerator():
-    global board
+    board = [[" "," "," "," "," "," "," "," "," "],
+         [" "," "," "," "," "," "," "," "," "],
+         [" "," "," "," "," "," "," "," "," "],
+         [" "," "," "," "," "," "," "," "," "],
+         [" "," "," "," "," "," "," "," "," "],
+         [" "," "," "," "," "," "," "," "," "],
+         [" "," "," "," "," "," "," "," "," "],
+         [" "," "," "," "," "," "," "," "," "],
+         [" "," "," "," "," "," "," "," "," "]]
     hisd= ""
     n= 1
     r= -1
@@ -119,16 +127,13 @@ def randomgenerator():
             else:
                 history.append(f'{r}:{i}:{t}')
                 t+=1     
+    return board
 
-def difficulty():
-    global board
-    dif = input("Choose a difficulty please (Easy, Medium, Hard): ").capitalize()
-    while dif not in ("Easy", "Medium", "Hard", 'Test'):
-        dif = input("Please choose a valid difficulty (Easy, Medium, Hard): ").capitalize()
+def difficulty(board, dif):
+    if dif.capitalize() not in ("Easy", "Medium", "Hard"):
+        raise Exception("Invalid difficulty")
 
-    if dif == 'Test':
-        empty_cells = 1
-    elif dif == 'Easy':
+    if dif == 'Easy':
         empty_cells = 40
     elif dif == 'Medium':
         empty_cells = 50
@@ -141,6 +146,9 @@ def difficulty():
         while board[row][col] == " ":
             row, col = sample(range(9), 2)
         board[row][col] = " "
+        
+    return board
+
 def picking():
     global board
     global lives
@@ -217,26 +225,27 @@ def try_again():
          [" "," "," "," "," "," "," "," "," "],
          [" "," "," "," "," "," "," "," "," "]]
     sudoku()
-                
-def sudoku():
-    global lives
-    print("Welcome to Sudoku!")
-    lives = 5
-    sleep(1)
-    randomgenerator()
-    difficulty()
-    boarddisplay()
-    while winner_check() and lives != 0:
-        picking()
-        boarddisplay()
-        
-    if lives == 0:
-        print("Game over!, Good try!")
-        try_again()
-    else:
-        print("Congrats!, you won!")
-        try_again()
+    
 
-sudoku()
-        
+if __name__ == "__main__":          
+    def sudoku():
+        global lives
+        print("Welcome to Sudoku!")
+        lives = 5
+        sleep(1)
+        randomgenerator()
+        difficulty()
+        boarddisplay()
+        while winner_check() and lives != 0:
+            picking()
+            boarddisplay()
+            
+        if lives == 0:
+            print("Game over!, Good try!")
+            try_again()
+        else:
+            print("Congrats!, you won!")
+            try_again()
+    sudoku()
+            
         
