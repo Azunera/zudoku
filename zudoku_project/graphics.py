@@ -1,9 +1,9 @@
 import sys 
-from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
-from PySide6.QtGui import QPainter, QPen, QColor, QFont 
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout, QSizePolicy
+from PySide6.QtGui import QPainter, QPen, QColor, QFont, QPalette
 from PySide6.QtCore import Qt 
-from logic import randomgenerator, difficulty, winner_check
-
+from logic import randomgenerator, difficulty, check_2
+from copy import deepcopy
 
 class Sudoku():
     def __init__(self):
@@ -16,16 +16,18 @@ class Sudoku():
          [" "," "," "," "," "," "," "," "," "],
          [" "," "," "," "," "," "," "," "," "],
          [" "," "," "," "," "," "," "," "," "]]
-        
+
     def setnumber(self, number, x, y):
         if self.sudoku[x][y] == " ":
             self.sudoku[x][y] = number
         else:
             print(f'Failed setting the number {number} in the position {x}/{y}')
 
+
     def difficulty(self, dif):
-        self.sudoku = difficulty(randomgenerator(), dif)
-        
+        self.sudoku_o = randomgenerator()
+        self.sudoku = difficulty(deepcopy(self.sudoku_o), dif)
+
     def winner_check(self):
         for row in range(9):
             for number in range(9):
@@ -62,18 +64,23 @@ I  \033[1m|\033[0m {board[8][0]} | {board[8][1]} | {board[8][2]} \033[1m|\033[0m
 class SudokuWidget(QWidget):
     def __init__(self, sudoku):
         super().__init__()
+        # self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
         self.sudoku = sudoku
+        self.sudoku_o = deepcopy(self.sudoku.sudoku)
         self.setAutoFillBackground(True)
         palette = self.palette()
         palette.setColor(self.backgroundRole(), Qt.white)
         self.setPalette(palette)
 
-
-        self.create_cells()
-
-    def paintEvent(self, event):
-        self.draw_grid() 
+        self.layout = QGridLayout(self)
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         
+        self.create_cells()
+        
+    def paintEvent(self, event):
+        self.draw_grid()
+
     def draw_grid(self):     
         cell_size = min(self.width(), self.height()) / 9
         
@@ -81,6 +88,8 @@ class SudokuWidget(QWidget):
         
         if cell_size1 is not None and cell_size1 != cell_size:
             self.create_cells()
+            # self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+            # self.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
     
         self.cell_size1 = cell_size
         
@@ -100,33 +109,47 @@ class SudokuWidget(QWidget):
             painter.drawLine(i * cell_size, 0, i * cell_size, cell_size*9)
 
             
-    def create_cells(self):
+    def create_cells(self, update= False):
         cell_size = min(self.width(), self.height()) / 9
         for x in range(0,9):
             for y in range(0,9):
                 cell = self.findChild(SudokuCell, f"cell_{x}_{y}")
-                
+
                 if cell is None:
-                    cell = SudokuCell(self, self.sudoku.sudoku[x][y])
+                    cell = SudokuCell(self, self.sudoku.sudoku[x][y], x, y)
+                    cell.set_target(self.sudoku_o[x][y])
                     cell.setObjectName(f"cell_{x}_{y}")
-                mid_x = y * cell_size  
-                mid_y = x * cell_size  
+                    self.layout.addWidget(cell, x, y)
+                    
+                if update:
+                    sudoku_o = self.sudoku.sudoku_o[x][y]
+                    cell.set_target(sudoku_o)
+                    cell.set_number(self.sudoku.sudoku[x][y])
+                    
+                # mid_x = y * cell_size
+                # mid_y = x * cell_size
 
-                cell.set_number(self.sudoku.sudoku[x][y])
+                # cell.set_number(cell.text())
                 
-                cell.setAlignment(Qt.AlignCenter)
+                # cell.setAlignment(Qt.AlignCenter)
+
+                # cell.setGeometry(mid_x, mid_y, cell_size, cell_size)
+                
+                cell.setFixedSize(cell_size, cell_size)
                 cell.setFont(QFont('Arial', cell_size/2))
-                cell.setGeometry(mid_x, mid_y, cell_size, cell_size)
-                cell.show() 
-                
-    def change_difficulty(self, difff):
-        self.puzzle = difficulty(randomgenerator(), difff)
-        self.create_cells()
-
+                for n in range(9):
+                    self.layout.setColumnStretch(n,0)
+                    self.layout.setRowStretch(n, 0)
+                # cell.show() 
+            
+    # def resizeEvent(self, event):
+    #     cell_size = min(self.width(), self.height()) / 9
+    #     self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
 
 class MainWindow(QMainWindow): 
     def __init__(self): 
         super().__init__() 
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setWindowTitle("Sudoku") 
         
         self.central_widget = QWidget() 
@@ -147,26 +170,24 @@ class MainWindow(QMainWindow):
         
         def easy_sudoku():
             sudoku.difficulty('Easy')
-            self.sudoku_widget.create_cells()
+            self.sudoku_widget.create_cells(True)
             sudoku.print_sudoku()
             
         def medium_sudoku():
             sudoku.difficulty('Medium')
-            self.sudoku_widget.create_cells()
+            self.sudoku_widget.create_cells(True)
             sudoku.print_sudoku()
             
         def hard_sudoku():
             sudoku.difficulty('Hard')
-            self.sudoku_widget.create_cells()
+            self.sudoku_widget.create_cells(True)
             sudoku.print_sudoku()
             
         easy_button.clicked.connect(easy_sudoku)
         medium_button.clicked.connect(medium_sudoku)
         hard_button.clicked.connect(hard_sudoku)
         
-        
-
-
+        self.setMinimumSize(1, 1)
         
 class DifficultyButton(QPushButton):
     def __init__(self, difficulty, color):
@@ -178,12 +199,21 @@ class DifficultyButton(QPushButton):
         
     
 class SudokuCell(QLabel):
-    def __init__(self, parent, number):
+    def __init__(self, parent, number, x, y):
         super().__init__(parent)
         self.setAlignment(Qt.AlignCenter)
-        self.setFont(QFont("Arial", 20))
-        self.setFixedSize(50, 50)  
+        # self.setFont(QFont("Arial", 20))
+        # self.setFixedSize(50, 50)  
         self.set_number(number)
+        self.x = x
+        self.y = y 
+        self.parent = parent
+    
+    def set_target(self, sudoku_o):
+        self.sudoku_o = sudoku_o
+        
+    def get_target(self):
+        return self.sudoku_o 
         
     def set_number(self, number):
         if number == 0:
@@ -191,18 +221,78 @@ class SudokuCell(QLabel):
         self.setText(str(number))
         
     def mousePressEvent(self, event):
-        self.setFocus()
+        if self.sudoku_o != self.text():
+            try:
+                for e in SudokuCell.prevcells:
+                    celly = self.parent.findChild(SudokuCell, f"cell_{e[0]}_{e[1]}")
+                    celly.colorize_background(Decolorize= True)
+            except: 
+                pass # This is to avoid the first run-time, when prevcells doesn't exist
+                
+                SudokuCell.prevcells= []
+            
+            self.colorize_background(Main= True)
+            SudokuCell.prevcells.append([self.x, self.y])
+            
+             # Colorizing horizontal and vertical adjecent lines
+            for n in range(9):
+                if n != self.x:
+                    celly = self.parent.findChild(SudokuCell, f"cell_{n}_{self.y}")
+                    celly.colorize_background()
+                    SudokuCell.prevcells.append([celly.x, celly.y])
+                    
+                if n != self.y:
+                    celly = self.parent.findChild(SudokuCell, f"cell_{self.x}_{n}")
+                    celly.colorize_background()
+                    SudokuCell.prevcells.append([celly.x, celly.y])
+                    
+            self.setFocus()
+
+    def colorize_background(self, Main= False, Decolorize= False, Wrong=False, cordss= ""):
+        self.setAutoFillBackground(True)
+        palette = self.palette()
+        if Wrong:
+            palette.setColor(self.backgroundRole(), QColor(240, 0, 0))
+        else:
+            if Decolorize:
+                self.setAutoFillBackground(False)
+            else:
+                if not Main:
+                    palette.setColor(self.backgroundRole(), QColor('#CFE8F6'))
+                    
+                else:
+                    palette.setColor(self.backgroundRole(), QColor('#9ACEEB'))
+
+        self.setPalette(palette)
     
+            
     def keyPressEvent(self, event):
-        key = event.text()
-        if key.isdigit() and 1 <= int(key) <= 9:
-            self.setText(key)
-        elif key == '0':
-            self.clear_text_signal.emit()
+        # Checking number and colorizing
+        if self.sudoku_o != self.text():
+            key = event.text()
+            
+            if key.isdigit() and 1 <= int(key) <= 9:
+                if self.parent.sudoku.sudoku_o[self.x][self.y] == key:
+                    self.setStyleSheet("color: rgb(0, 0, 150);")
+                    self.setText(key)
+                elif key != self.text():
+                    self.setStyleSheet("color: rgb(200, 0, 0);")
+                    self.setText(key)
+                    wrong_spots= check_2(self.parent.sudoku.sudoku, key, self.x, self.y)
+                    for cords in wrong_spots:
+                        celly = self.parent.findChild(SudokuCell, f"cell_{cords[0]}_{cords[1]}")
+                        # print(cords, celly, cords[0], cords[1])
+                        celly.colorize_background(Wrong= True, cordss= wrong_spots)
+                    
+                    
+                else:
+                    self.setText("")
+                                 
+            elif key == '0':
+                self.clear_text_signal.emit()
 
     def clear_text(self):
         self.setText('')
-            
  
 if __name__ == "__main__": 
     app = QApplication(sys.argv) 

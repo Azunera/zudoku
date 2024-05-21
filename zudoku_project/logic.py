@@ -35,6 +35,38 @@ I  \033[1m|\033[0m {board[8][0]} | {board[8][1]} | {board[8][2]} \033[1m|\033[0m
    \033[1m+---+---+---+---+---+---+---+---+---+\033[0m
 ''')
 
+
+def check_2(board, number, x, y):
+    def num_searcher(group, number, w, z, sq=False):
+        listofcords = []
+        if sq:
+            top_x, top_y = square_convertor(w, z)
+            for m in range(top_x, top_x + 3):
+                for n in range(top_y, top_y + 3):
+                    if group[m][n] == number and (m, n) != (w, z):
+                        listofcords.append([m, n])
+        else:
+            for v in range(9):
+                if group[w][v] == number and v != z:
+                    listofcords.append([w, v])
+                if group[v][z] == number and v != w:
+                    listofcords.append([v, z])
+        return listofcords
+
+    def square_convertor(x, y):
+        return (x // 3) * 3, (y // 3) * 3
+
+    coordinates = []
+
+    # Search in the row and column
+    coordinates.extend(num_searcher(board, number, x, y))
+
+    # Search in the 3x3 square
+    coordinates.extend(num_searcher(board, number, x, y, sq=True))
+
+    return coordinates
+
+
 def check(boardd):
     
     rows = ["".join(row) for row in boardd]
@@ -139,16 +171,19 @@ def difficulty(board, dif):
         empty_cells = 50
     else:  # 'Hard'
         empty_cells = 60
-        
 
-    for __ in range(empty_cells):
-        row, col = sample(range(9), 2)
-        while board[row][col] == " ":
-            row, col = sample(range(9), 2)
-        board[row][col] = " "
+    selected_positions = set() 
+
+    cells_with_numbers = [(row, col) for row in range(9) for col in range(9) if board[row][col] != " "]
+
+    while len(selected_positions) < empty_cells:
+        row, col = sample(cells_with_numbers, 1)[0]
+
+        if (row, col) not in selected_positions:
+            selected_positions.add((row, col))
+            board[row][col] = " "
         
     return board
-
 def picking():
     global board
     global lives
