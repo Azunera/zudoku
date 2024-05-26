@@ -1,1 +1,0 @@
-print(ord('B') - ord('A'))
