@@ -1,25 +1,91 @@
-from PySide6.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
-from PySide6.QtGui import QPainter, QColor
+from PySide6.QtWidgets import QApplication, QTableWidget,QApplication, QMainWindow, QWidget, QVBoxLayout, QTableWidgetItem, QLabel, QPushButton, QGridLayout, QSizePolicy
+from PySide6.QtGui     import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
+from PySide6.QtCore    import Qt, Slot
+from SudokuLogic       import Sudoku 
+from SudokuCell        import SudokuItem
+import sys
 
-class ColorTableWidgetItem(QTableWidgetItem):
-    def __init__(self, text="", color=None):
-        super().__init__(text)
-        self.color = color if color else QColor(0, 0, 0)
+class SudokuTable(QTableWidget):
+    def __init__(self, rows, columns, parent=None):
+        super().__init__(rows, columns, parent)
+        self.focus_cell = None
+        self.sudoku = Sudoku()
+        self.sudoku.generate_sudoku()
+        self.sudoku.set_difficulty("Easy")
+        
+        self.sudoku.number_set.connect(self.update_table_number)  # Connect signal to slot
 
-    def paint(self, painter):
-        painter.save()
-        painter.setPen(self.color)
-        painter.drawText(self.rect(), self.text())
-        painter.restore()
+        self.initUI()
 
-app = QApplication([])
+    def initUI(self):
+        self.setFixedSize(450, 450)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.horizontalHeader().setVisible(False)
+        self.verticalHeader().setVisible(False)
+        self.horizontalHeader().setDefaultSectionSize(50)
+        self.verticalHeader().setDefaultSectionSize(50)
+    
+        self.setStyleSheet("QTableWidget { background-color: white; gridline-color: lightgray; }")
+        
+        for x in range(9):
+            for y in range(9):
+                item = SudokuItem("", x, y)
+                item.set_number(self.sudoku.sudoku[x][y])
+                self.setItem(x, y, item)
 
-tableWidget = QTableWidget(2, 2)
+    def update_table_number(self, x, y, number):
+        item = self.item(x, y)
+        item.set_number(number)
+        # Update color based on status
+        status = self.sudoku.statuses[x][y]
+        item.set_background_color(status)
+        
+    def handleCellClicked(self, row, column):
+        if self.focus_cell:
+            self.focus_cell.set_background_color('Clear')
+        self.focus_cell = self.item(row, column)
+        if not self.sudoku.is_number_correct(row, column, self.focus_cell.text()):
+            self.focus_cell.set_background_color('Focused')
+            
+    def mouseDoubleClickEvent(self, event):
+        event.ignore()
 
-# Create a QTableWidgetItem with custom text color
-item = ColorTableWidgetItem("Text", QColor(255, 0, 0))
+    def mousePressEvent(self, event):
+        event.ignore()
+        # Calculating cell location
+        x = event.position().toPoint().y() // self.rowHeight(0)
+        y = event.position().toPoint().x() // self.columnWidth(0)
+        
+        # Handle cell click manually
+        self.handleCellClicked(x, y)
 
-tableWidget.setItem(0, 0, item)
+    def mouseMoveEvent(self, event):
+        event.ignore()
 
-tableWidget.show()
-app.exec()
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        event.ignore()
+        if not self.focus_cell or self.sudoku.is_number_correct(self.focus_cell.x, self.focus_cell.y, self.focus_cell.text()):
+            return
+
+        key = event.text()
+        
+        if key.isdigit():
+            self.sudoku.set_number(self.focus_cell.x, self.focus_cell.y, key)
+
+            wrong_numbers = self.sudoku.find_wrong_numbers(self.focus_cell.x, self.focus_cell.y, key)
+            print(wrong_numbers)
+            
+            for number in wrong_numbers:
+                x, y = number
+                item = self.item(x, y)
+                if item:
+                    item.set_background_color('Wrong')
+                
+        
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    table = SudokuTable(9, 9)
+    table.show()
+    sys.exit(app.exec())
