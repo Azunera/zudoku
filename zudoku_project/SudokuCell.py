@@ -3,7 +3,6 @@ from PySide6.QtGui import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QB
 from PySide6.QtCore import Qt 
 from SudokuLogic import Sudoku 
 
-
 class SudokuItem(QTableWidgetItem):
     def __init__(self, number="", x=0, y=0):
         super().__init__(number)
@@ -12,22 +11,18 @@ class SudokuItem(QTableWidgetItem):
         self.x = x
         self.y = y
         self.set_number(number)
-
+        self.setForeground(QBrush(QColor("blue")))
+        
     def set_number(self, number):
         if number:
-            self.setForeground(QBrush(QColor("black")))
             self.setText(str(number))
-        else:
-            self.setText("")
 
-    def set_background_color(self, status='Clear'):
+    def set_background_color(self, status):
         match status:
-            case 'Focused':
-                self.setBackground(QColor(200, 200, 255))
-            case 'Wrong':
+            case 1:
+                self.setBackground(QColor(255, 255, 255))
+            case -1:
                 self.setBackground(QColor(255, 200, 200))
-            case 'Clear':
-                self.setBackground(QColor(255, 255, 255))
-            case _:
-                self.setBackground(QColor(255, 255, 255))
-                
+            case 'F':
+                self.setBackground(QColor(200, 200, 255))
+

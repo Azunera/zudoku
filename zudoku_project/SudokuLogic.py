@@ -7,14 +7,15 @@ from copy import deepcopy
 
 class Sudoku(QObject):
     number_set = Signal(int, int, str)  # Signal to emit when a number is set
-    find_wrong_numbers  = Signal(str)
+    
+    find_wrong_numbers  = Signal(str) 
     def __init__(self):
         super().__init__()
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
-        self.statuses = [["1" for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
-        self.wrongs = None
+        self.statuses = [[1 for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
         self.o_sudoku = None
         self.difficulty = None 
+        self.wrongs = []
         self.complete_sudoku = None
 
     def check(self):
@@ -35,21 +36,6 @@ class Sudoku(QObject):
                         if group.count(number) > 1:
                             return False
         return True
-    
-    def update_statuses(self):
-        # Reset all statuses
-        for x in range(9):
-            for y in range(9):
-                self.statuses[x][y] = '1'
-        
-        # Mark wrong numbers
-        for x in range(9):
-            for y in range(9):
-                number = self.sudoku[x][y]
-                if number != " " and not self.is_number_correct(x, y, number):
-                    wrong_numbers = self.find_wrong_numbers(x, y, number)
-                    for wx, wy in wrong_numbers:
-                        self.statuses[wx][wy] = 'Wrong'
 
     def generate_sudoku(self):
         """
@@ -178,7 +164,7 @@ class Sudoku(QObject):
     def set_number(self, x, y, number):
         """
         Set a number in the Sudoku board at the given position if the number isn't the correct one.
-
+4
         Args:
             number (str): The number to set in the board.
             x (int): The row index.
@@ -187,11 +173,10 @@ class Sudoku(QObject):
         if self.sudoku[x][y] != self.complete_sudoku[x][y]:
 
             self.sudoku[x][y] = number
-            self.update_statuses()
+            # self.update_statuses()
             self.number_set.emit(x, y, number) 
-            
-            
-    def find_wrong_numbers(self, x, y, number):
+                
+    def update_statuses(self, x, y, number):
         """
         Finds coordinates of conflicting numbers on the Sudoku board.
 
@@ -199,55 +184,45 @@ class Sudoku(QObject):
             number (str): The number to check.
             x (int): The row index.
             y (int): The column index.
-
-        Returns:
-            list: A list of tuples with coordinates of the wrong numbers.
         """
+        def convertor(x, y):
+            return (x // 3) * 3 + y // 3, (x % 3) * 3 + y % 3
 
-        def num_searcher(group, number, w, z, sq=False):
-            listofcords = []
-            if sq:
-                top_x, top_y = square_convertor(w, z)
-                for m in range(top_x, top_x + 3):
-                    for n in range(top_y, top_y + 3):
-                        if group[m][n] == number and (m, n) != (w, z):
-                            listofcords.append((m, n))
-            else:
-                for v in range(9):
-                    if group[w][v] == number and v != z:
-                        listofcords.append((w, v))
-                    if group[v][z] == number and v != w:
-                        listofcords.append((v, z))
-            return listofcords
+        rows = ["".join(row) for row in self.sudoku]
+        columns = ["".join(column) for column in zip(*self.sudoku)]
+        squares = ["".join(self.sudoku[r][e] for r in range(r1, r1 + 3) for e in range(e1, e1 + 3)) for r1 in range(0, 9, 3) for e1 in range(0, 9, 3)]
+        our_board = [rows, columns, squares]
 
-        def square_convertor(x, y):
-            return (x // 3) * 3, (y // 3) * 3
+        wrong_cords = set()
+        for group in our_board:
+            for x in range(9):
+                counter = {}
+                safety_pin = True
+                for y in range(9):
+                    if group == columns:
+                        actual_x, actual_y = y, x
+                    elif group == squares:
+                        actual_x, actual_y = convertor(x, y)
+                    else:
+                        actual_x, actual_y = x, y
 
-        def anti_repeater(x):
-            for e in x:
-                if e in coordinates:
-                    return False
-            else:
-                return True
-            
-        coordinates = set()
+                    if group[x][y] != " ":
+                        if group[x][y] not in counter:
+                            counter[group[x][y]] = (actual_x, actual_y)
+                        else:
+                            if safety_pin:
+                                wrong_cords.add(counter[group[x][y]])
+                                wrong_cords.add((actual_x, actual_y))
+                                safety_pin = False
+                            else:
+                                wrong_cords.add((actual_x, actual_y))
+                                
+        self.statuses = [[1 for _ in range(9)] for _ in range(9)]      
+        for nums in wrong_cords:
+            self.statuses[nums[0]][nums[1]] *= -1
 
-        # Search in the row and column
-        row_and_column_coords = num_searcher(self.sudoku, number, x, y)
-        coordinates.update(row_and_column_coords)
 
-        # Search in the 3x3 square
-        square_coords = num_searcher(self.sudoku, number, x, y, sq=True)
-        coordinates.update(square_coords)
-        
-        for cords in coordinates:
 
-            self.statuses[cords[0]][cords[1]] *= -1
-            
-        return list(coordinates)
-            
-            
-           
     def is_number_correct(self, x, y, number):
         """
         Check if the number at position (x, y) is the correct number.

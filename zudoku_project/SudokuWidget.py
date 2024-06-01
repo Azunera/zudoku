@@ -42,11 +42,11 @@ class SudokuTable(QTableWidget):
         item.set_background_color(status)
         
     def handleCellClicked(self, row, column):
-        if self.focus_cell:
-            self.focus_cell.set_background_color('Clear')
+        # if self.focus_cell:
+        #     self.focus_cell.set_background_color('Clear')
         self.focus_cell = self.item(row, column)
         if not self.sudoku.is_number_correct(row, column, self.focus_cell.text()):
-            self.focus_cell.set_background_color('Focused')
+            self.focus_cell.set_background_color('F')
             
     def mouseDoubleClickEvent(self, event):
         event.ignore()
@@ -62,7 +62,17 @@ class SudokuTable(QTableWidget):
 
     def mouseMoveEvent(self, event):
         event.ignore()
-
+            
+    def color_updater(self):
+        for x in range(9):
+            for y in range(9):
+                self.item(x, y).set_background_color(self.sudoku.statuses[x][y])
+                
+        if self.sudoku.statuses[self.focus_cell.x][self.focus_cell.y] == 1:
+            self.item(self.focus_cell.x, self.focus_cell.y).set_background_color('F')
+            
+            
+            
     def keyPressEvent(self, event: QKeyEvent) -> None:
         event.ignore()
         if not self.focus_cell or self.sudoku.is_number_correct(self.focus_cell.x, self.focus_cell.y, self.focus_cell.text()):
@@ -73,15 +83,11 @@ class SudokuTable(QTableWidget):
         if key.isdigit():
             self.sudoku.set_number(self.focus_cell.x, self.focus_cell.y, key)
 
-            wrong_numbers = self.sudoku.find_wrong_numbers(self.focus_cell.x, self.focus_cell.y, key)
-            print(wrong_numbers)
+            self.sudoku.update_statuses(self.focus_cell.x, self.focus_cell.y, key)
+            # print(self.sudoku.statuses)
+            self.color_updater()
             
-            for number in wrong_numbers:
-                x, y = number
-                item = self.item(x, y)
-                if item:
-                    item.set_background_color('Wrong')
-                
+
         
 
 if __name__ == "__main__":
