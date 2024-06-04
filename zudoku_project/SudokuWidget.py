@@ -9,6 +9,7 @@ class SudokuTable(QTableWidget):
     def __init__(self, rows, columns, parent=None):
         super().__init__(rows, columns, parent)
         self.focus_cell = None
+        self.focus_xy   = None
         self.sudoku = Sudoku()
         self.sudoku.generate_sudoku()
         self.sudoku.set_difficulty("Easy")
@@ -34,18 +35,33 @@ class SudokuTable(QTableWidget):
                 item.set_number(self.sudoku.sudoku[x][y])
                 self.setItem(x, y, item)
 
-    def update_table_number(self, x, y, number):
+
+    def update_table_number(self, x, y):
+        print("hey!")
         item = self.item(x, y)
-        item.set_number(number)
+        item.set_number(self.sudoku.sudoku[x][y])
         # Update color based on status
         status = self.sudoku.statuses[x][y]
         item.set_background_color(status)
         
+    def update_table(self):
+        for x in range(9):
+            for y in range(9):
+                item = self.item(x, y)
+                item.set_number(self.sudoku.sudoku[x][y])
+                status = self.sudoku.statuses[x][y]
+                item.set_background_color(status)
+
     def handleCellClicked(self, row, column):
-        # if self.focus_cell:
-        #     self.focus_cell.set_background_color('Clear')
+        try:
+            print(self.focus_cell.y)
+            self.focus_cell.set_background_color(1)
+        except: pass
+        
         self.focus_cell = self.item(row, column)
+        
         if not self.sudoku.is_number_correct(row, column, self.focus_cell.text()):
+            self.sudoku.statuses[row][column] = 'F'
             self.focus_cell.set_background_color('F')
             
     def mouseDoubleClickEvent(self, event):
@@ -81,6 +97,8 @@ class SudokuTable(QTableWidget):
         key = event.text()
         
         if key.isdigit():
+            if self.focus_cell.text() == key:
+                pass
             self.sudoku.set_number(self.focus_cell.x, self.focus_cell.y, key)
 
             self.sudoku.update_statuses(self.focus_cell.x, self.focus_cell.y, key)

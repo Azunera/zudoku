@@ -3,7 +3,6 @@ from typing import List, Tuple, Set
 from time import sleep
 from copy import deepcopy
 from PySide6.QtCore import QObject, Signal
-from copy import deepcopy
 
 class Sudoku(QObject):
     number_set = Signal(int, int, str)  # Signal to emit when a number is set
@@ -39,10 +38,12 @@ class Sudoku(QObject):
 
     def generate_sudoku(self):
         """
-        Generate a complete random Sudoku board from zero.
+        Generate a complete nnew random Sudoku board from zero, 
 
-        Returns:
-            list: A 2D list representing the Sudoku board.
+        Updates:
+            self.sudoku = A new generated sudoku (prepared to be adjusted according difficulty)
+            self.complete_sudoku = A new generated sudoku
+            self.statuses = Resets them to standard status
         """
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
         hisd= ""
@@ -115,6 +116,7 @@ class Sudoku(QObject):
                     t+=1     
                     
         self.complete_sudoku = deepcopy(self.sudoku)
+        self.statuses = [[1 for _ in range(9)] for _ in range(9)] 
         
     def set_difficulty(self, difficulty):
         """
@@ -129,7 +131,7 @@ class Sudoku(QObject):
         Raises:
             Exception: If an invalid difficulty level is provided.
         """
-        if difficulty.capitalize() not in ("Easy", "Medium", "Hard"):
+        if difficulty.capitalize() not in ("Easy", "Medium", "Hard", "Test"):
             raise Exception("Invalid difficulty")
 
         if difficulty == 'Easy':
@@ -138,7 +140,9 @@ class Sudoku(QObject):
             empty_cells = 50
         else:  # 'Hard'
             empty_cells = 60
-
+        if difficulty == "Test":
+            empty_cells = 1
+            
         selected_positions = set() 
 
         cells_with_numbers = [(row, col) for row in range(9) for col in range(9) if self.sudoku[row][col] != " "]
@@ -158,9 +162,6 @@ class Sudoku(QObject):
         Returns True if valid, False for invalid
         """
 
-    def set_status(self, color= 'clear'):
-        return color
-            
     def set_number(self, x, y, number):
         """
         Set a number in the Sudoku board at the given position if the number isn't the correct one.
@@ -172,8 +173,12 @@ class Sudoku(QObject):
         """
         if self.sudoku[x][y] != self.complete_sudoku[x][y]:
 
-            self.sudoku[x][y] = number
-            # self.update_statuses()
+            if self.sudoku[x][y] == number:
+                self.sudoku[x][y] = " "
+                self.statuses[x][y] = 1
+            else: 
+                self.sudoku[x][y] = number
+            
             self.number_set.emit(x, y, number) 
                 
     def update_statuses(self, x, y, number):
@@ -220,8 +225,6 @@ class Sudoku(QObject):
         self.statuses = [[1 for _ in range(9)] for _ in range(9)]      
         for nums in wrong_cords:
             self.statuses[nums[0]][nums[1]] *= -1
-
-
 
     def is_number_correct(self, x, y, number):
         """
