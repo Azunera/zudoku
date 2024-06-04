@@ -1,19 +1,22 @@
 from PySide6.QtWidgets import QApplication, QTableWidget,QApplication, QMainWindow, QWidget, QVBoxLayout, QTableWidgetItem, QLabel, QPushButton, QGridLayout, QSizePolicy
 from PySide6.QtGui     import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
-from PySide6.QtCore    import Qt, Slot
+from PySide6.QtCore    import Qt, Slot, Signal
 from SudokuLogic       import Sudoku 
 from SudokuCell        import SudokuItem
 import sys
 
+# Depende de SudokuItem
 class SudokuTable(QTableWidget):
+    
     def __init__(self, rows, columns, parent=None):
+        self.winning = Signal(bool)
         super().__init__(rows, columns, parent)
         self.focus_cell = None
         self.focus_xy   = None
         self.sudoku = Sudoku()
         self.sudoku.generate_sudoku()
-        self.sudoku.set_difficulty("Easy")
-        
+        self.sudoku.set_difficulty("Test")
+
         self.sudoku.number_set.connect(self.update_table_number)  # Connect signal to slot
         self.font = QFont("Arial", 15)
         
@@ -116,6 +119,11 @@ class SudokuTable(QTableWidget):
             self.sudoku.update_statuses(self.focus_cell.x, self.focus_cell.y, key)
             # print(self.sudoku.statuses)
             self.color_updater()
+            
+            if self.sudoku.check_win():
+                self.winning.emit(True)
+                
+
             
 
         

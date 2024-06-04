@@ -22,6 +22,9 @@ class MainWindow(QMainWindow):
         self.sudoku_widget = SudokuTable(9,9)
         layout.addWidget(self.sudoku_widget, 0, 0)
         
+        self.sudoku_widget.winning.connect(self.win)
+        
+        
         right_widgets_layout = QVBoxLayout(self.central_widget)
         layout.addLayout(right_widgets_layout, 0, 1)
         
@@ -62,7 +65,9 @@ class MainWindow(QMainWindow):
         right_widgets_layout.addSpacerItem(spacer)
         
         right_widgets_layout.addStretch()
-                
+        
+        self.winning_label = QLabel()
+        right_widgets_layout.addWidget(winning_label)
         
         
         def easy_sudoku():            
@@ -93,7 +98,10 @@ class MainWindow(QMainWindow):
         font.setPointSize(15)
         self.sudoku_widget.set_font(font)
         self.sudoku_widget.update_table_font()
-        
+    
+    def win(self, status):
+        if status:
+            self.winning_label.setText("You win!")
         
 # if __name__ == "__main__":
 #     app = QApplication(sys.argv)

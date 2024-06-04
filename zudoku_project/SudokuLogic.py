@@ -1,3 +1,5 @@
+# REMOVE SIGNAL AND INSTEAD YK
+
 from random import randrange, shuffle, choice, sample
 from typing import List, Tuple, Set
 from time import sleep

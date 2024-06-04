@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import  QTableWidgetItem
 from PySide6.QtGui import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
-from PySide6.QtCore import Qt 
-from SudokuLogic import Sudoku 
+from PySide6.QtCore import Qt  
 from Colors import color
+
 
 class SudokuItem(QTableWidgetItem):
     def __init__(self, number="", x=0, y=0):
