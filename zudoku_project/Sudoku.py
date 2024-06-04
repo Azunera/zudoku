@@ -1,6 +1,6 @@
-from PySide6.QtWidgets import QFontComboBox, QApplication, QTableWidget, QApplication, QMainWindow, QWidget, QVBoxLayout, QTableWidgetItem, QLabel, QPushButton, QGridLayout, QSizePolicy
+from PySide6.QtWidgets import QSpacerItem, QFontComboBox, QApplication, QTableWidget, QApplication, QMainWindow, QWidget, QVBoxLayout, QTableWidgetItem, QLabel, QPushButton, QGridLayout, QSizePolicy
 from PySide6.QtGui     import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
-from PySide6.QtCore    import Qt 
+from PySide6.QtCore    import Qt
 from SudokuLogic       import Sudoku 
 from SudokuCell        import SudokuItem
 from SudokuWidget      import SudokuTable
@@ -15,12 +15,26 @@ class MainWindow(QMainWindow):
         self.central_widget = QWidget() 
         self.setCentralWidget(self.central_widget)
         
-        layout = QVBoxLayout(self.central_widget)
+        layout = QGridLayout(self.central_widget)
 
+
+        sudoku = Sudoku()
+        self.sudoku_widget = SudokuTable(9,9)
+        layout.addWidget(self.sudoku_widget, 0, 0)
+        
+        right_widgets_layout = QVBoxLayout(self.central_widget)
+        layout.addLayout(right_widgets_layout, 0, 1)
+        
+        spacer = QSpacerItem(40,40)
+        
         #<---- Font changer ---->
         font_changer = QFontComboBox()
         font_changer.currentFontChanged.connect(self.font_changed)
-        layout.addWidget(font_changer)
+        right_widgets_layout.addWidget(font_changer)
+    
+        right_widgets_layout.addSpacerItem(spacer)
+        
+        spacer = QSpacerItem(10,10)
         
         #<---- Difficulties buttons ---->
         class DifficultyButton(QPushButton):
@@ -35,13 +49,21 @@ class MainWindow(QMainWindow):
         medium_button = DifficultyButton('Medium', 'Yellow')
         hard_button = DifficultyButton('Hard', 'Red')
         
-        layout.addWidget(easy_button)
-        layout.addWidget(medium_button)
-        layout.addWidget(hard_button)
+        right_widgets_layout.addWidget(easy_button)
+    
+        right_widgets_layout.addSpacerItem(spacer)
         
-        sudoku = Sudoku()
-        self.sudoku_widget = SudokuTable(9,9)
-        layout.addWidget(self.sudoku_widget)
+        right_widgets_layout.addWidget(medium_button)
+    
+        right_widgets_layout.addSpacerItem(spacer)
+        
+        right_widgets_layout.addWidget(hard_button)
+
+        right_widgets_layout.addSpacerItem(spacer)
+        
+        right_widgets_layout.addStretch()
+                
+        
         
         def easy_sudoku():            
             self.sudoku_widget.sudoku.generate_sudoku() 

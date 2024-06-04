@@ -140,6 +140,7 @@ class Sudoku(QObject):
             empty_cells = 50
         else:  # 'Hard'
             empty_cells = 60
+            
         if difficulty == "Test":
             empty_cells = 1
             

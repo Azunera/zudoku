@@ -39,7 +39,6 @@ class SudokuTable(QTableWidget):
 
 
     def update_table_number(self, x, y):
-        print("hey!")
         item = self.item(x, y)
         item.set_number(self.sudoku.sudoku[x][y])
         # Update color based on status
