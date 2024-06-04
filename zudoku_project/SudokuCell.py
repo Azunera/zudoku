@@ -2,6 +2,7 @@ from PySide6.QtWidgets import  QTableWidgetItem
 from PySide6.QtGui import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
 from PySide6.QtCore import Qt 
 from SudokuLogic import Sudoku 
+from Colors import color
 
 class SudokuItem(QTableWidgetItem):
     def __init__(self, number="", x=0, y=0):
@@ -18,6 +19,7 @@ class SudokuItem(QTableWidgetItem):
             self.setText(str(number))
 
     def set_background_color(self, status):
+    
         match status:
             case 1:
                 self.setBackground(QColor(255, 255, 255))

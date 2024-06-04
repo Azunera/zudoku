@@ -15,7 +15,9 @@ class SudokuTable(QTableWidget):
         self.sudoku.set_difficulty("Easy")
         
         self.sudoku.number_set.connect(self.update_table_number)  # Connect signal to slot
-
+        self.font = QFont("Arial", 15)
+        
+        
         self.initUI()
 
     def initUI(self):
@@ -44,6 +46,17 @@ class SudokuTable(QTableWidget):
         status = self.sudoku.statuses[x][y]
         item.set_background_color(status)
         
+
+    def set_font(self, font):
+        self.font = font
+
+    def update_table_font(self):
+        for x in range(9):
+            for y in range(9):
+                item = self.item(x, y)
+                if item is not None:
+                    item.setFont(self.font)
+
     def update_table(self):
         for x in range(9):
             for y in range(9):

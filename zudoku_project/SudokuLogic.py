@@ -156,12 +156,6 @@ class Sudoku(QObject):
             
         return self.sudoku
 
-        """
-        Checks the validness of the Sudoku board.
-
-        Returns True if valid, False for invalid
-        """
-
     def set_number(self, x, y, number):
         """
         Set a number in the Sudoku board at the given position if the number isn't the correct one.
