@@ -1,8 +1,7 @@
 from PySide6.QtWidgets import  QTableWidgetItem
-from PySide6.QtGui import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
+from PySide6.QtGui import QColor, QFont, QBrush
 from PySide6.QtCore import Qt  
-from Colors import color
-
+from SudokuColors import SkColor
 
 class SudokuItem(QTableWidgetItem):
     def __init__(self, number="", x=0, y=0):
@@ -18,13 +17,11 @@ class SudokuItem(QTableWidgetItem):
         if number:
             self.setText(str(number))
 
-    def set_background_color(self, status):
-    
+    def set_background_color(self, status: SkColor):
         match status:
-            case 1:
+            case SkColor.WHITE:
                 self.setBackground(QColor(255, 255, 255))
-            case -1:
+            case SkColor.RED:
                 self.setBackground(QColor(255, 200, 200))
-            case 'F':
+            case SkColor.BLUE:
                 self.setBackground(QColor(200, 200, 255))
-

@@ -1,26 +1,23 @@
-from PySide6.QtWidgets import QApplication, QTableWidget,QApplication, QMainWindow, QWidget, QVBoxLayout, QTableWidgetItem, QLabel, QPushButton, QGridLayout, QSizePolicy
-from PySide6.QtGui     import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
-from PySide6.QtCore    import Qt, Slot, Signal
-from SudokuLogic       import Sudoku 
+from PySide6.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
+from PySide6.QtGui     import QKeyEvent, QFont, QBrush, QColor
+from PySide6.QtCore    import Qt, Signal, Slot
+from SudokuLogic       import Sudoku
 from SudokuCell        import SudokuItem
+from SudokuColors      import SkColor
 import sys
 
-# Depende de SudokuItem
 class SudokuTable(QTableWidget):
-    
+    winning = Signal()
+
     def __init__(self, rows, columns, parent=None):
-        self.winning = Signal(bool)
         super().__init__(rows, columns, parent)
         self.focus_cell = None
-        self.focus_xy   = None
+        self.focus_xy = None
         self.sudoku = Sudoku()
         self.sudoku.generate_sudoku()
         self.sudoku.set_difficulty("Test")
-
-        self.sudoku.number_set.connect(self.update_table_number)  # Connect signal to slot
+        self.colors = SkColor
         self.font = QFont("Arial", 15)
-        
-        
         self.initUI()
 
     def initUI(self):
@@ -31,7 +28,7 @@ class SudokuTable(QTableWidget):
         self.verticalHeader().setVisible(False)
         self.horizontalHeader().setDefaultSectionSize(50)
         self.verticalHeader().setDefaultSectionSize(50)
-    
+
         self.setStyleSheet("QTableWidget { background-color: white; gridline-color: lightgray; }")
         
         for x in range(9):
@@ -40,14 +37,13 @@ class SudokuTable(QTableWidget):
                 item.set_number(self.sudoku.sudoku[x][y])
                 self.setItem(x, y, item)
 
-
     def update_table_number(self, x, y):
         item = self.item(x, y)
         item.set_number(self.sudoku.sudoku[x][y])
+        
         # Update color based on status
         status = self.sudoku.statuses[x][y]
         item.set_background_color(status)
-        
 
     def set_font(self, font):
         self.font = font
@@ -69,16 +65,16 @@ class SudokuTable(QTableWidget):
 
     def handleCellClicked(self, row, column):
         try:
-            print(self.focus_cell.y)
-            self.focus_cell.set_background_color(1)
-        except: pass
+            self.focus_cell.set_background_color(SkColor.WHITE)
+        except: 
+            pass
         
         self.focus_cell = self.item(row, column)
         
         if not self.sudoku.is_number_correct(row, column, self.focus_cell.text()):
-            self.sudoku.statuses[row][column] = 'F'
-            self.focus_cell.set_background_color('F')
-            
+            self.sudoku.statuses[row][column] = SkColor.RED
+            self.focus_cell.set_background_color(self.colors.BLUE)
+
     def mouseDoubleClickEvent(self, event):
         event.ignore()
 
@@ -88,7 +84,6 @@ class SudokuTable(QTableWidget):
         x = event.position().toPoint().y() // self.rowHeight(0)
         y = event.position().toPoint().x() // self.columnWidth(0)
         
-        # Handle cell click manually
         self.handleCellClicked(x, y)
 
     def mouseMoveEvent(self, event):
@@ -99,10 +94,8 @@ class SudokuTable(QTableWidget):
             for y in range(9):
                 self.item(x, y).set_background_color(self.sudoku.statuses[x][y])
                 
-        if self.sudoku.statuses[self.focus_cell.x][self.focus_cell.y] == 1:
-            self.item(self.focus_cell.x, self.focus_cell.y).set_background_color('F')
-            
-            
+        if self.sudoku.statuses[self.focus_cell.x][self.focus_cell.y] == SkColor.WHITE:
+            self.item(self.focus_cell.x, self.focus_cell.y).set_background_color(SkColor.BLUE)
             
     def keyPressEvent(self, event: QKeyEvent) -> None:
         event.ignore()
@@ -115,19 +108,14 @@ class SudokuTable(QTableWidget):
             if self.focus_cell.text() == key:
                 pass
             self.sudoku.set_number(self.focus_cell.x, self.focus_cell.y, key)
-
+            self.focus_cell.set_number(key)
             self.sudoku.update_statuses(self.focus_cell.x, self.focus_cell.y, key)
-            # print(self.sudoku.statuses)
             self.color_updater()
             
             if self.sudoku.check_win():
-                self.winning.emit(True)
-                
-
-            
-
-        
-
+                self.winning.emit()
+    
+    def Lives()
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     table = SudokuTable(9, 9)

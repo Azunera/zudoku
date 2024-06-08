@@ -5,19 +5,20 @@ from typing import List, Tuple, Set
 from time import sleep
 from copy import deepcopy
 from PySide6.QtCore import QObject, Signal
+from SudokuColors import SkColor
 
 class Sudoku(QObject):
-    number_set = Signal(int, int, str)  # Signal to emit when a number is set
-    
     find_wrong_numbers  = Signal(str) 
+    lives = 5
+    
     def __init__(self):
         super().__init__()
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
-        self.statuses = [[1 for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
+        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
         self.o_sudoku = None
         self.difficulty = None 
         self.wrongs = []
-        self.complete_sudoku = None
+        self.solution = None
 
     def check(self):
         """
@@ -44,7 +45,7 @@ class Sudoku(QObject):
 
         Updates:
             self.sudoku = A new generated sudoku (prepared to be adjusted according difficulty)
-            self.complete_sudoku = A new generated sudoku
+            self.solution = A new generated sudoku
             self.statuses = Resets them to standard status
         """
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
@@ -117,7 +118,7 @@ class Sudoku(QObject):
                     history.append(f'{r}:{i}:{t}')
                     t+=1     
                     
-        self.complete_sudoku = deepcopy(self.sudoku)
+        self.solution = deepcopy(self.sudoku)
         self.statuses = [[1 for _ in range(9)] for _ in range(9)] 
         
     def set_difficulty(self, difficulty):
@@ -168,16 +169,14 @@ class Sudoku(QObject):
             x (int): The row index.
             y (int): The column index.
         """
-        if self.sudoku[x][y] != self.complete_sudoku[x][y]:
+        if self.sudoku[x][y] != self.solution[x][y]:
 
             if self.sudoku[x][y] == number:
                 self.sudoku[x][y] = " "
                 self.statuses[x][y] = 1
             else: 
                 self.sudoku[x][y] = number
-            
-            self.number_set.emit(x, y, number) 
-                
+   
     def update_statuses(self, x, y, number):
         """
         Finds coordinates of conflicting numbers on the Sudoku board.
@@ -219,9 +218,10 @@ class Sudoku(QObject):
                             else:
                                 wrong_cords.add((actual_x, actual_y))
                                 
-        self.statuses = [[1 for _ in range(9)] for _ in range(9)]      
+                               
+        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]      
         for nums in wrong_cords:
-            self.statuses[nums[0]][nums[1]] *= -1
+            self.statuses[nums[0]][nums[1]] = SkColor.RED
 
     def is_number_correct(self, x, y, number):
         """
@@ -236,7 +236,7 @@ class Sudoku(QObject):
             bool: True if the number is correct, False otherwise.
         """
         
-        return self.complete_sudoku[x][y] == number
+        return self.solution[x][y] == number
 
     def check_win(self):
         """
@@ -247,7 +247,7 @@ class Sudoku(QObject):
         """
         for x in range(9):
             for y in range(0):
-                if self.sudoku[x][y] != self.complete_sudoku:
+                if self.sudoku[x][y] != self.solution:
                     return False
         return True
 
@@ -274,7 +274,8 @@ H  \033[1m|\033[0m {self.sudoku[7][0]} | {self.sudoku[7][1]} | {self.sudoku[7][2
    \033[1m+\033[0m---+---+---\033[1m+\033[0m---+---+---\033[1m+\033[0m---+---+---+\033[0m
 I  \033[1m|\033[0m {self.sudoku[8][0]} | {self.sudoku[8][1]} | {self.sudoku[8][2]} \033[1m|\033[0m {self.sudoku[8][3]} | {self.sudoku[8][4]} | {self.sudoku[8][5]} \033[1m|\033[0m {self.sudoku[8][6]} | {self.sudoku[8][7]} | {self.sudoku[8][8]} \033[1m|\033[0m
    \033[1m+---+---+---+---+---+---+---+---+---+\033[0m ''')
-        
+    
+
 if __name__ == "__main__":
     sudoku = Sudoku()
     sudoku.generate_sudoku()
