@@ -1,16 +1,14 @@
 # REMOVE SIGNAL AND INSTEAD YK
 
 from random import randrange, shuffle, choice, sample
-from typing import List, Tuple, Set
 from time import sleep
 from copy import deepcopy
 from PySide6.QtCore import QObject, Signal
-from SudokuColors import SkColor
+from SudokuEnums import SkColor
 
 class Sudoku(QObject):
-    find_wrong_numbers  = Signal(str) 
-    lives = 5
-    
+    lost_all_lives  = Signal() 
+    lost_one_life   = Signal(int)
     def __init__(self):
         super().__init__()
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
@@ -19,6 +17,8 @@ class Sudoku(QObject):
         self.difficulty = None 
         self.wrongs = []
         self.solution = None
+        self.lives = 5
+        
 
     def check(self):
         """
@@ -39,6 +39,16 @@ class Sudoku(QObject):
                             return False
         return True
 
+    def lives_updater(self, reset= False):
+        if not reset:
+            self.lives -= 1
+            self.lost_one_life.emit(self.lives)
+        else:
+            self.lives = 5
+        
+        if self.lives == 0:
+            self.lost_all_lives.emit()   
+            
     def generate_sudoku(self):
         """
         Generate a complete nnew random Sudoku board from zero, 
@@ -62,7 +72,8 @@ class Sudoku(QObject):
                 r = 0
             ii = True
             g = True
-            if n==10: break
+            if n==10: 
+                break
         
             while g:
                 # print("Current state of the self.sudoku:")
@@ -119,7 +130,7 @@ class Sudoku(QObject):
                     t+=1     
                     
         self.solution = deepcopy(self.sudoku)
-        self.statuses = [[1 for _ in range(9)] for _ in range(9)] 
+        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)] 
         
     def set_difficulty(self, difficulty):
         """
@@ -219,9 +230,13 @@ class Sudoku(QObject):
                                 wrong_cords.add((actual_x, actual_y))
                                 
                                
-        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]      
+        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]
+        
+        # Updates the current grid colors data in logic      
         for nums in wrong_cords:
             self.statuses[nums[0]][nums[1]] = SkColor.RED
+            
+
 
     def is_number_correct(self, x, y, number):
         """
@@ -237,6 +252,7 @@ class Sudoku(QObject):
         """
         
         return self.solution[x][y] == number
+      
 
     def check_win(self):
         """
@@ -246,8 +262,8 @@ class Sudoku(QObject):
             bool: True if the board matches the solution, False otherwise.
         """
         for x in range(9):
-            for y in range(0):
-                if self.sudoku[x][y] != self.solution:
+            for y in range(9):
+                if self.sudoku[x][y] != self.solution[x][y]:
                     return False
         return True
 
@@ -275,10 +291,10 @@ H  \033[1m|\033[0m {self.sudoku[7][0]} | {self.sudoku[7][1]} | {self.sudoku[7][2
 I  \033[1m|\033[0m {self.sudoku[8][0]} | {self.sudoku[8][1]} | {self.sudoku[8][2]} \033[1m|\033[0m {self.sudoku[8][3]} | {self.sudoku[8][4]} | {self.sudoku[8][5]} \033[1m|\033[0m {self.sudoku[8][6]} | {self.sudoku[8][7]} | {self.sudoku[8][8]} \033[1m|\033[0m
    \033[1m+---+---+---+---+---+---+---+---+---+\033[0m ''')
     
-
+        
 if __name__ == "__main__":
     sudoku = Sudoku()
     sudoku.generate_sudoku()
     sudoku.print_sudoku
-    sudoku.find_wrong_numbers()
+
 
