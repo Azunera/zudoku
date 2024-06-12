@@ -104,6 +104,8 @@ class SudokuTable(QTableWidget):
 
         key = event.text()
         
+
+        
         if key.isdigit():
             if self.focus_cell.text() == key:
                 pass
@@ -112,10 +114,13 @@ class SudokuTable(QTableWidget):
             self.sudoku.update_statuses(self.focus_cell.x, self.focus_cell.y, key)
             self.color_updater()
             
+            if self.sudoku.lives == 0:
             if self.sudoku.check_win():
                 self.winning.emit()
+
+            
     
-    def Lives()
+ 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     table = SudokuTable(9, 9)

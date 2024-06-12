@@ -4,13 +4,13 @@ from random import randrange, shuffle, choice, sample
 from typing import List, Tuple, Set
 from time import sleep
 from copy import deepcopy
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, Property
 from SudokuColors import SkColor
 
 class Sudoku(QObject):
-    find_wrong_numbers  = Signal(str) 
-    lives = 5
+    Lost  = Signal() 
     
+        
     def __init__(self):
         super().__init__()
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
@@ -19,6 +19,18 @@ class Sudoku(QObject):
         self.difficulty = None 
         self.wrongs = []
         self.solution = None
+        self.lives = 5
+
+    # @Property(int)
+    # def lives(self):
+    #     return self._lives
+
+    # @lives.setter
+    # def lives(self, value):
+    #     if self._lives == value:
+    #         self._lives = value
+    #         self.lives_changed.emit()  # Emit the signal when lives change
+
 
     def check(self):
         """
@@ -120,6 +132,7 @@ class Sudoku(QObject):
                     
         self.solution = deepcopy(self.sudoku)
         self.statuses = [[1 for _ in range(9)] for _ in range(9)] 
+        self.lives = 5
         
     def set_difficulty(self, difficulty):
         """
@@ -156,14 +169,14 @@ class Sudoku(QObject):
 
             if (row, col) not in selected_positions:
                 selected_positions.add((row, col))
-                self.sudoku[row][col] = " "
+                self.sudoku[row][col] = " " 
             
         return self.sudoku
 
     def set_number(self, x, y, number):
         """
         Set a number in the Sudoku board at the given position if the number isn't the correct one.
-4
+
         Args:
             number (str): The number to set in the board.
             x (int): The row index.
@@ -176,6 +189,7 @@ class Sudoku(QObject):
                 self.statuses[x][y] = 1
             else: 
                 self.sudoku[x][y] = number
+                self.lives -= 1
    
     def update_statuses(self, x, y, number):
         """
@@ -238,6 +252,7 @@ class Sudoku(QObject):
         
         return self.solution[x][y] == number
 
+
     def check_win(self):
         """
         Checks if the current Sudoku board matches the complete Sudoku solution.
@@ -275,7 +290,6 @@ H  \033[1m|\033[0m {self.sudoku[7][0]} | {self.sudoku[7][1]} | {self.sudoku[7][2
 I  \033[1m|\033[0m {self.sudoku[8][0]} | {self.sudoku[8][1]} | {self.sudoku[8][2]} \033[1m|\033[0m {self.sudoku[8][3]} | {self.sudoku[8][4]} | {self.sudoku[8][5]} \033[1m|\033[0m {self.sudoku[8][6]} | {self.sudoku[8][7]} | {self.sudoku[8][8]} \033[1m|\033[0m
    \033[1m+---+---+---+---+---+---+---+---+---+\033[0m ''')
     
-
 if __name__ == "__main__":
     sudoku = Sudoku()
     sudoku.generate_sudoku()
