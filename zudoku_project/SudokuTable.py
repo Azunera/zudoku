@@ -15,14 +15,14 @@ class SudokuTable(QTableWidget):
         super().__init__(rows, columns, parent)
         self.focus_cell = None
         self.focus_xy = None
-        self.sudoku = Sudoku()
+        self.sudoku = parent.sudoku
         self.colors = SkColor
         self.sudoku.lost_all_lives.connect(self.on_game_lost)
         self.sudoku.lost_one_life.connect(self.on_life_lost)
         self.sudoku.generate_sudoku()
         self.sudoku.set_difficulty("Test")
         self.game = Game_Statuses
-        self.font = QFont("Arial", 15)
+        self.font = QFont("Arial", 17)
         self.initUI()
         self.playable = True
 
@@ -35,19 +35,20 @@ class SudokuTable(QTableWidget):
         self.horizontalHeader().setDefaultSectionSize(50)
         self.verticalHeader().setDefaultSectionSize(50)
 
-        self.setStyleSheet("QTableWidget { background-color: white; gridline-color: lightgray; }")
+        self.setStyleSheet("QTableWidget { background-color: black; gridline-color: lightgray; }")
         
         for x in range(9):
             for y in range(9):
                 item = SudokuItem("", x, y)
                 item.set_number(self.sudoku.sudoku[x][y])
+                item.setFont(self.font)
                 self.setItem(x, y, item)
 
     def update_table_number(self, x, y):
         item = self.item(x, y)
         item.set_number(self.sudoku.sudoku[x][y])
         
-        # Update color based on status
+        # Update colozzzr based on status
         status = self.sudoku.statuses[x][y]
         item.set_background_color(status)
 

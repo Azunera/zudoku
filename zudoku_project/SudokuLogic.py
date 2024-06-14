@@ -9,8 +9,9 @@ from SudokuEnums import SkColor
 class Sudoku(QObject):
     lost_all_lives  = Signal() 
     lost_one_life   = Signal(int)
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
         self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
         self.o_sudoku = None
@@ -77,7 +78,7 @@ class Sudoku(QObject):
         
             while g:
                 # print("Current state of the self.sudoku:")
-                # printsudoku()
+                # printsudoku()e
                 # print("Trying to fill number", n, "at row", r)
                 indexes= "012345678"
                 try:
@@ -150,10 +151,13 @@ class Sudoku(QObject):
 
         if difficulty == 'Easy':
             empty_cells = 40
+            self.lives = 15
         elif difficulty == 'Medium':
             empty_cells = 50
+            self.lives = 10
         else:  # 'Hard'
             empty_cells = 60
+            self.lives = 5
             
         if difficulty == "Test":
             empty_cells = 1

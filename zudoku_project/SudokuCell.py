@@ -20,8 +20,8 @@ class SudokuItem(QTableWidgetItem):
     def set_background_color(self, status: SkColor):
         match status:
             case SkColor.WHITE:
-                self.setBackground(QColor(255, 255, 255))
+                self.setBackground(QColor(0, 0, 0))
             case SkColor.RED:
-                self.setBackground(QColor(255, 200, 200))
+                self.setBackground(QColor(55, 0, 0))
             case SkColor.BLUE:
-                self.setBackground(QColor(200, 200, 255))
+                self.setBackground(QColor(0, 0, 55))

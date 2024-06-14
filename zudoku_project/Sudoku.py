@@ -1,42 +1,41 @@
+#!/usr/bin/env python3
 from PySide6.QtWidgets import QSpacerItem, QFontComboBox, QApplication, QTableWidget, QApplication, QMainWindow, QWidget, QVBoxLayout, QTableWidgetItem, QLabel, QPushButton, QGridLayout, QSizePolicy
 from PySide6.QtGui     import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
 from PySide6.QtCore    import Qt, Signal, Slot
 from SudokuLogic       import Sudoku 
 from SudokuCell        import SudokuItem
-from SudokuWidget      import SudokuTable
+from SudokuTable       import SudokuTable
 from SudokuEnums       import Game_Statuses
 from functools         import partial
+from SudokuWidgets     import DifficultyButton
 import sys
 
 class MainWindow(QMainWindow): 
     def __init__(self): 
         super().__init__() 
+        # Setting intials properties and layouts of the MainWindow
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setWindowTitle("Sudoku") 
-        
         self.central_widget = QWidget() 
         self.setCentralWidget(self.central_widget)
-        
         layout = QGridLayout(self.central_widget)
 
-        sudoku = Sudoku()
-        self.sudoku_widget = SudokuTable(9, 9)
-        layout.addWidget(self.sudoku_widget, 0, 0)
-        
-        self.sudoku_widget.game_updater.connect(self.label_updater)
-        self.sudoku_widget.lost_life.connect(self.life_label_setter)
+        # Initialize sudoku logic and board representation
+        self.sudoku = Sudoku(self)
+        self.table  = SudokuTable(9, 9, self)
+
+        layout.addWidget(self.table, 0, 0)
+
+
+        # <----->
+
+        self.table.game_updater.connect(self.label_updater)
+        self.table.lost_life.connect(self.life_label_setter)
         
         right_layout = QVBoxLayout(self.central_widget)
         
         #<---- Difficulties buttons ---->
-        class DifficultyButton(QPushButton):
-            def __init__(self, difficulty, color):
-                super().__init__(difficulty)
-                self.dif=difficulty
-                self.setFixedWidth(100)
-                self.setStyleSheet(f'background-color: {color}')
-                self.clicked.emit()
-        
+
       
         easy_button = DifficultyButton('Easy', 'Cyan')
         medium_button = DifficultyButton('Medium', 'Yellow')
@@ -51,15 +50,15 @@ class MainWindow(QMainWindow):
         hard_button.clicked.connect(partial(self.game_reseter, 'Hard'))
 
         font = QFont()
-        font.setPointSize(15)  # Set the font size
-        #<---- Game Label ---->
-        self.lives_label = QLabel("lives left " + '5')
+        font.setPointSize(16)  
+        #<---- Lives Label ---->
+        self.lives_label = QLabel("lives left " + str(self.sudoku.lives))
         self.lives_label.setFont(font)
-        
-        right_layout.addWidget(self.lives_label)  # Empty label below the difficulty buttons
+        right_layout.addWidget(self.lives_label)  
+
         #<---- Game Label ---->
         self.game_label = QLabel("")
-        right_layout.addWidget(self.game_label)  # Empty label below the difficulty buttons
+        right_layout.addWidget(self.game_label) 
         self.game_label.setFont(font)
         
         #<---- Numbers layout ---->
@@ -72,6 +71,7 @@ class MainWindow(QMainWindow):
         for i in range(1, 10):
             button = QPushButton(str(i))
             button.setFixedSize(50, 50)
+            button.clicked.connect(partial(self.numbers_pressed, i))
             number_buttons.append(button)
             number_button_layout.addWidget(button, (i-1)//3, (i-1)%3)
 
@@ -92,22 +92,24 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1, 1)
         
 
-        
+    def numbers_pressed(self, number):
+        event = QKeyEvent(QKeyEvent.KeyPress, 0, Qt.NoModifier, str(number))
+        QApplication.postEvent(self.table, event)
+
     def font_changed(self, font):
-        font.setPointSize(15)
-        self.sudoku_widget.set_font(font)
-        self.sudoku_widget.update_table_font()
+        font.setPointSize(17)
+        self.table.font = font
+        self.table.update_table_font()
 
     
     def game_reseter(self, difficulty):
-        # Assuming self.sudoku_widget.sudoku is defined elsewhere
-        self.sudoku_widget.sudoku.generate_sudoku()
-        self.sudoku_widget.sudoku.lives_updater(reset=True)
+        self.sudoku.generate_sudoku()
+        self.sudoku.lives_updater(reset=True)
         self.label_updater(Game_Statuses.STATIS)
-        self.sudoku_widget.sudoku.set_difficulty(difficulty)
-        self.sudoku_widget.update_table()
-        self.life_label_setter(5)
-        self.sudoku_widget.sudoku.print_sudoku()
+        self.sudoku.set_difficulty(difficulty)
+        self.table.update_table()
+        self.life_label_setter(self.sudoku.lives)
+        self.sudoku.print_sudoku()
         
     @Slot(Game_Statuses)
     def label_updater(self, status: Game_Statuses):
@@ -125,8 +127,6 @@ class MainWindow(QMainWindow):
     def life_label_setter(self, lives):
         self.lives_label.setText("lives left " + str(lives))
          
-        
-
         
 if __name__ == "__main__": 
     app = QApplication(sys.argv) 
