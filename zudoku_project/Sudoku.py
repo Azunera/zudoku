@@ -13,59 +13,56 @@ import sys
 class MainWindow(QMainWindow): 
     def __init__(self): 
         super().__init__() 
-        # Setting intials properties and layouts of the MainWindow
+        
+        # Setting startings properties and layouts of the MainWindow
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setWindowTitle("Sudoku") 
         self.central_widget = QWidget() 
         self.setCentralWidget(self.central_widget)
-        layout = QGridLayout(self.central_widget)
-
+        main_layout = QGridLayout(self.central_widget)
+        
         # Initialize sudoku logic and board representation
         self.sudoku = Sudoku(self)
         self.table  = SudokuTable(9, 9, self)
-
-        layout.addWidget(self.table, 0, 0)
-
-
-        # <----->
-
-        self.table.game_updater.connect(self.label_updater)
-        self.table.lost_life.connect(self.life_label_setter)
+        main_layout.addWidget(self.table, 0, 0)
         
-        right_layout = QVBoxLayout(self.central_widget)
+        # Connecting lives system from Sudoku to lives and gamestatus label.
+        self.sudoku.lost_all_lives.connect(self.label_updater)
+        self.sudoku.lost_one_life.connect(self.life_label_setter)
         
-        #<---- Difficulties buttons ---->
+        # Initializing the right sidebar widget
+        right_sidebar_widget = QWidget()
+        right_sidebar_layout = QVBoxLayout(right_sidebar_widget)
 
-      
+        # Difficulties buttons
         easy_button = DifficultyButton('Easy', 'Cyan')
         medium_button = DifficultyButton('Medium', 'Yellow')
         hard_button = DifficultyButton('Hard', 'Red')
         
-        right_layout.addWidget(easy_button)
-        right_layout.addWidget(medium_button)
-        right_layout.addWidget(hard_button)
+        right_sidebar_layout.addWidget(easy_button)
+        right_sidebar_layout.addWidget(medium_button)
+        right_sidebar_layout.addWidget(hard_button)
         
         easy_button.clicked.connect(partial(self.game_reseter, 'Easy'))
         medium_button.clicked.connect(partial(self.game_reseter, 'Medium'))
         hard_button.clicked.connect(partial(self.game_reseter, 'Hard'))
-
-        font = QFont()
-        font.setPointSize(16)  
-        #<---- Lives Label ---->
-        self.lives_label = QLabel("lives left " + str(self.sudoku.lives))
-        self.lives_label.setFont(font)
-        right_layout.addWidget(self.lives_label)  
-
-        #<---- Game Label ---->
-        self.game_label = QLabel("")
-        right_layout.addWidget(self.game_label) 
-        self.game_label.setFont(font)
         
-        #<---- Numbers layout ---->
+        # Lives & Game status labels
+        LGfont = QFont()
+        LGfont.setPointSize(16) 
+        
+        self.lives_label = QLabel("lives left " + str(self.sudoku.lives))
+        self.lives_label.setFont(LGfont)
+        right_sidebar_layout.addWidget(self.lives_label)  
 
+        self.game_label = QLabel("")
+        right_sidebar_layout.addWidget(self.game_label) 
+        self.game_label.setFont(LGfont)
+        
+        # Numbers layout
         number_button_layout = QGridLayout()
-        number_button_layout.setSpacing(5)  # Set the spacing between buttons
-        number_button_layout.setContentsMargins(0, 0, 0, 0)  # Set the margins around the layout
+        number_button_layout.setSpacing(5)  
+        number_button_layout.setContentsMargins(0, 0, 0, 0) 
 
         number_buttons = []
         for i in range(1, 10):
@@ -77,21 +74,18 @@ class MainWindow(QMainWindow):
 
         number_button_widget = QWidget()
         number_button_widget.setLayout(number_button_layout)
-        right_layout.addWidget(number_button_widget)  # Number buttons below the empty label
+        right_sidebar_layout.addWidget(number_button_widget)
 
-        button_widget = QWidget()
-        button_widget.setLayout(right_layout)
-        layout.addWidget(button_widget, 0, 1, alignment=Qt.AlignTop)  # All buttons in the right
-
-        #<---- Font changer ---->
+        # Font changer
         font_changer = QFontComboBox()
         font_changer.currentFontChanged.connect(self.font_changed)
-        right_layout.addWidget(font_changer)
-        
-        
+        right_sidebar_layout.addWidget(font_changer)
+
+        # Set the right sidebar widget as the layout for the central widget
+        main_layout.addWidget(right_sidebar_widget, 0, 1, alignment=Qt.AlignTop)
+
         self.setMinimumSize(1, 1)
         
-
     def numbers_pressed(self, number):
         event = QKeyEvent(QKeyEvent.KeyPress, 0, Qt.NoModifier, str(number))
         QApplication.postEvent(self.table, event)
@@ -100,16 +94,22 @@ class MainWindow(QMainWindow):
         font.setPointSize(17)
         self.table.font = font
         self.table.update_table_font()
-
     
     def game_reseter(self, difficulty):
+        # Generates a randomly sudoku, sets its difficulty
         self.sudoku.generate_sudoku()
-        self.sudoku.lives_updater(reset=True)
-        self.label_updater(Game_Statuses.STATIS)
         self.sudoku.set_difficulty(difficulty)
-        self.table.update_table()
+
+        # Updates the lives display and current game status
         self.life_label_setter(self.sudoku.lives)
-        self.sudoku.print_sudoku()
+        self.label_updater(Game_Statuses.STATIS)
+
+        # Clears table colors and makes it playable
+        self.table.update_table()
+        self.table.playable_toggler(True)
+
+        # In case need for debugging
+        # self.sudoku.print_sudoku()
         
     @Slot(Game_Statuses)
     def label_updater(self, status: Game_Statuses):
@@ -119,6 +119,7 @@ class MainWindow(QMainWindow):
                 
             case Game_Statuses.DEFEAT:
                 self.game_label.setText("You lost!")
+                self.table.playable_toggler(False)
                 
             case Game_Statuses.VICTORY:
                 self.game_label.setText("You win!")
@@ -126,11 +127,9 @@ class MainWindow(QMainWindow):
     @Slot()
     def life_label_setter(self, lives):
         self.lives_label.setText("lives left " + str(lives))
-         
         
 if __name__ == "__main__": 
     app = QApplication(sys.argv) 
     window = MainWindow() 
     window.show() 
     sys.exit(app.exec())
-

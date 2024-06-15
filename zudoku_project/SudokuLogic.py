@@ -3,11 +3,12 @@
 from random import randrange, shuffle, choice, sample
 from time import sleep
 from copy import deepcopy
+from enum import Enum
 from PySide6.QtCore import QObject, Signal
-from SudokuEnums import SkColor
+from SudokuEnums import SkColor, Game_Statuses
 
 class Sudoku(QObject):
-    lost_all_lives  = Signal() 
+    lost_all_lives  = Signal(Enum) 
     lost_one_life   = Signal(int)
     def __init__(self, parent):
         super().__init__(parent)
@@ -40,16 +41,13 @@ class Sudoku(QObject):
                             return False
         return True
 
-    def lives_updater(self, reset= False):
-        if not reset:
-            self.lives -= 1
-            self.lost_one_life.emit(self.lives)
-        else:
-            self.lives = 5
-        
+    def on_life_lost(self):
+        self.lives -= 1
+        self.lost_one_life.emit(self.lives)
+
         if self.lives == 0:
-            self.lost_all_lives.emit()   
-            
+            self.lost_all_lives.emit(Game_Statuses.DEFEAT)   
+
     def generate_sudoku(self):
         """
         Generate a complete nnew random Sudoku board from zero, 
