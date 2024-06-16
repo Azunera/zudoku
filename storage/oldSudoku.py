@@ -4,7 +4,8 @@ from PySide6.QtCore    import Qt
 from SudokuLogic       import Sudoku 
 from SudokuCell        import SudokuItem
 from SudokuWidget      import SudokuTable
-import sys
+from sys import exit as exitt
+from sys import argv
 
 class MainWindow(QMainWindow): 
     def __init__(self): 
@@ -109,8 +110,8 @@ class MainWindow(QMainWindow):
 #     sys.exit(app.exec())
     
 if __name__ == "__main__": 
-    app = QApplication(sys.argv) 
+    app = QApplication(argv) 
     window = MainWindow() 
     window.show() 
-    sys.exit(app.exec())
+    exitt(app.exec())
 
