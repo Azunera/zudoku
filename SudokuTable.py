@@ -2,6 +2,7 @@ from PySide6.QtWidgets   import QWidget
 from PySide6.QtGui       import QPainter, QPen, QColor, QFont, QPalette
 from PySide6.QtCore      import Qt, QRect, Slot
 from SudokuEnums         import SkColor
+import json
 
 class SudokuWidget(QWidget):
     def __init__(self, parent):
@@ -9,43 +10,35 @@ class SudokuWidget(QWidget):
         self.sudoku = parent.sudoku
         self.sudoku.generate_sudoku()
         self.sudoku.set_difficulty("Medium")
-        self.colors = SkColor
         self.setMinimumSize(400,400)
-        # self.sudoku.number_set.connect(self.update_table_number)  # Connect signal to slot
-
         self.setAutoFillBackground(True)
-
 
         palette = self.palette()
         palette.setColor(self.backgroundRole(), Qt.white)
         self.setPalette(palette)
 
-
         self.font = QFont()
-        self.font.setFamilies(['Arial', 'Helvetica', 'Sans-serif'])  # List of alternative fonts
-       
-        self.focus_cell = None  # To keep track of the selected cell
+        self.font.setFamilies(['Arial', 'Helvetica', 'Sans-serif'])  
 
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.focus_cell = None  # Keeping track of selected cell
+
+        self.setFocusPolicy(Qt.StrongFocus) # Letting keyPressEvent work
+
+
     def paintEvent(self, event):
-        self.draw_numbers_and_colors()
-        self.draw_grid()
+        painter = QPainter(self)
+        cell_size = min(self.width(), self.height()) // 9
+        pen = QPen(Qt.black, 2, Qt.SolidLine)
+        painter.setPen(pen)
+
+        self.draw_numbers_and_colors(painter, cell_size, pen)
+        self.draw_grid(painter, cell_size, pen)
+
         if self.focus_cell:
             self.highlight_focus_cell()
 
 
-    def set_font(self, font):
-        self.font = font
-        self.update()
-
-
-    def draw_grid(self):
-        cell_size = min(self.width(), self.height()) // 9
-        painter = QPainter(self)
-        pen = QPen(Qt.black, 2, Qt.SolidLine)
-        painter.setPen(pen)
-       
-        # Draw the grid lines
+    def draw_grid(self, painter, cell_size, pen):
         for i in range(10):
             if i % 3 == 0:
                 pen.setWidth(2)
@@ -56,14 +49,8 @@ class SudokuWidget(QWidget):
             painter.drawLine(0, i * cell_size, cell_size * 9, i * cell_size)
             painter.drawLine(i * cell_size, 0, i * cell_size, cell_size * 9)
 
-    def draw_numbers_and_colors(self):
-        # self.sudoku.print_sudoku()
-           
-        cell_size = min(self.width(), self.height()) // 9
-        painter = QPainter(self)
-        pen = QPen(Qt.black, 2, Qt.SolidLine)
-        painter.setPen(pen)
-       
+
+    def draw_numbers_and_colors(self, painter, cell_size, pen):
         self.font.setPointSize(cell_size / 2.2)
         painter.setFont(self.font)
        
@@ -76,6 +63,32 @@ class SudokuWidget(QWidget):
                     elif self.sudoku.statuses[row][col] == SkColor.WHITE:
                         painter.fillRect(rect, QColor(255, 255, 255)) 
                     painter.drawText(rect, Qt.AlignCenter, str(self.sudoku.sudoku[row][col]))
+
+
+    def save_game(self):
+
+        game_data = {
+            'sudoku': self.sudoku.sudoku,
+            'statuses': self.sudoku.statuses,
+            'difficulty': self.sudoku.difficulty,
+            'lives': self.sudoku.lives,
+            'focus_cell': self.focus_cell
+        }
+        with open('sudoku_save.json', 'w') as f:
+            json.dump(game_data, f)
+
+    def load_game(self):
+        try:
+            with open('sudoku_save.json', 'r') as f:
+                game_data = json.load(f)
+                self.sudoku.sudoku = game_data['sudoku']
+                self.sudoku.statuses = game_data['statuses']
+                self.sudoku.difficulty = game_data['difficulty']
+                self.sudoku.lives = game_data['lives']
+                self.focus_cell = tuple(game_data['focus_cell']) if game_data['focus_cell'] else None
+                self.update()
+        except:
+            pass  # No saved game file found
 
     def highlight_focus_cell(self):
         row, col = self.focus_cell
@@ -127,16 +140,4 @@ class SudokuWidget(QWidget):
                     
             # if self.sudoku.check_win():
             #     self.game_updater.emit(Game_Statuses.VICTORY)
-
-    @Slot()
-    def playable_toggler(self, status):
-        '''
-        Sets the playability of the sudoku table. 
-        Arg:
-            status (bool): True for setting the table playable; False for turning it unplayable
-        '''
-        self.playable = status
-
-
-
 

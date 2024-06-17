@@ -12,21 +12,24 @@ import sys
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        
+
         # Setting startings properties and layouts of the MainWindow
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setWindowTitle("Zudoku") 
         
         self.central_widget = QWidget() 
         self.setCentralWidget(self.central_widget)
-        
+
         main_layout = QGridLayout(self.central_widget)
         
         # Initialize sudoku logic and board representation
         self.sudoku = Sudoku(self)
         self.table  = SudokuWidget(self)
         main_layout.addWidget(self.table, 0, 0)
-        
+
+        # Load game data if available
+        self.table.load_game()
+
         # Connecting lives system from Sudoku to lives and gamestatus label.
         self.sudoku.lost_all_lives.connect(self.label_updater)
         self.sudoku.lost_one_life.connect(self.life_label_setter)
@@ -87,6 +90,11 @@ class MainWindow(QMainWindow):
 
         self.setMinimumSize(1, 1)
         
+
+    def closeEvent(self, event):
+        self.table.save_game()
+        super().closeEvent(event)
+        
     def numbers_pressed(self, number):
         event = QKeyEvent(QKeyEvent.KeyPress, 0, Qt.NoModifier, str(number))
         if self.table.focus_cell is not None:
@@ -106,13 +114,9 @@ class MainWindow(QMainWindow):
         self.life_label_setter(self.sudoku.lives)
         self.label_updater(Game_Statuses.STATIS)
 
-        # Clears table colors and makes it playable
+        # Clears table colors 
         self.table.focus_cell = None
         self.table.update()
-        self.table.playable_toggler(True)
-
-        # In case need for debugging
-        # self.sudoku.print_sudoku()
         
     @Slot(Game_Statuses)
     def label_updater(self, status: Game_Statuses):
@@ -122,8 +126,7 @@ class MainWindow(QMainWindow):
                 
             case Game_Statuses.DEFEAT:
                 self.game_label.setText("You lost!")
-                self.table.playable_toggler(False)
-                
+
             case Game_Statuses.VICTORY:
                 self.game_label.setText("You win!")
                 
