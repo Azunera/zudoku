@@ -140,7 +140,10 @@ class SudokuWidget(QWidget):
 
 
     def keyPressEvent(self, event):
+        if self.focus_cell is None:
+            return 
         row, col = self.focus_cell
+            
         if self.sudoku.is_number_correct(row, col, self.sudoku.sudoku[row][col]) or not self.sudoku.lives:
             return
 

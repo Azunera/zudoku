@@ -16,9 +16,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         # Setting startings properties and layouts of the MainWindow
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
         self.setWindowTitle("Zudoku") 
-        
         self.central_widget = QWidget() 
         self.setCentralWidget(self.central_widget)
 
@@ -29,6 +28,9 @@ class MainWindow(QMainWindow):
         self.table  = SudokuWidget(self)
         main_layout.addWidget(self.table, 0, 0)
 
+        self.setMinimumSize(650,410)
+
+ 
        # Load game data if available
         self.load_game()
 
@@ -92,8 +94,7 @@ class MainWindow(QMainWindow):
         # Set the right sidebar widget as the layout for the central widget
         main_layout.addWidget(right_sidebar_widget, 0, 1, alignment=Qt.AlignTop)
 
-        self.setMinimumSize(1, 1)
-        
+
     def closeEvent(self, event):
         self.save_game()
         super().closeEvent(event)
@@ -136,13 +137,11 @@ class MainWindow(QMainWindow):
     @Slot()
     def life_label_setter(self, lives):
         self.lives_label.setText("lives left " + str(lives))
-
-
     def save_game(self):
         game_data = {
             'sudoku': self.sudoku.sudoku,
             'solution': self.sudoku.solution,
-            'statuses': [[[color.value for color in row] for row in column] for column in self.sudoku.statuses],
+            'statuses': [[[color.name for color in row] for row in column] for column in self.sudoku.statuses],
             'difficulty': self.sudoku.difficulty,
             'lives': self.sudoku.lives,
             'focus_cell': self.table.focus_cell
@@ -157,12 +156,19 @@ class MainWindow(QMainWindow):
                 
                 self.sudoku.sudoku = game_data['sudoku']
                 self.sudoku.solution = game_data.get('solution', None)
-                self.sudoku.statuses = [[[SkColor(*rgb) for rgb in row] for row in column] for column in game_data['statuses']]
+                self.sudoku.statuses = [
+                    [
+                        [SkColor[color] for color in row]
+                        for row in column
+                    ]
+                    for column in game_data['statuses']
+                ]
                 self.sudoku.difficulty = game_data['difficulty']
                 self.sudoku.lives = game_data['lives']
                 self.focus_cell = game_data['focus_cell'] if game_data['focus_cell'] else None
                 
-                self.update()  # Ensure the UI updates after loading
+                print(self.sudoku.statuses)
+                self.update() 
         except:
             pass
 

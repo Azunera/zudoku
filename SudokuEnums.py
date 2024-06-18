@@ -29,8 +29,7 @@ class SkColor(enum.Enum):
     def rgb_to_hex(self):
         return '#{:02x}{:02x}{:02x}'.format(self.value[0], self.value[1], self.value[2])
 
-    def to_rgb_tuple(self):
-        return self.value
+
 
     
 class Game_Statuses(enum.Enum):
