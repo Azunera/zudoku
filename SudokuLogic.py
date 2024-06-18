@@ -1,15 +1,16 @@
 # REMOVE SIGNAL AND INSTEAD YK
 
-from random import randrange, shuffle, choice, sample
-from time import sleep
+from random import shuffle, sample
 from copy import deepcopy
 from enum import Enum
 from PySide6.QtCore import QObject, Signal
 from SudokuEnums import SkColor, Game_Statuses
 
 class Sudoku(QObject):
-    lost_all_lives  = Signal(Enum) 
     lost_one_life   = Signal(int)
+    lost_all_lives  = Signal(Enum)
+    sudoku_completed = Signal(Enum) 
+    
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
@@ -46,7 +47,7 @@ class Sudoku(QObject):
         self.lost_one_life.emit(self.lives)
 
         if self.lives == 0:
-            self.lost_all_lives.emit(Game_Statuses.DEFEAT)   
+            self.lost_all_lives.emit(Game_Statuses.LOST)   
 
     def generate_sudoku(self):
         """
@@ -159,6 +160,7 @@ class Sudoku(QObject):
             
         if difficulty == "Test":
             empty_cells = 1
+            self.lives = 100
             
         selected_positions = set() 
 
@@ -267,8 +269,9 @@ class Sudoku(QObject):
             for y in range(9):
                 if self.sudoku[x][y] != self.solution[x][y]:
                     return False
+                
+        self.sudoku_completed.emit(Game_Statuses.COMPLETED)
         return True
-
     def print_sudoku(self):
         """Prints the current state of the board"""
         print(f'''

@@ -1,15 +1,20 @@
 from PySide6.QtWidgets   import QWidget
-from PySide6.QtGui       import QPainter, QPen, QColor, QFont, QPalette
-from PySide6.QtCore      import Qt, QRect, Slot
+from PySide6.QtGui       import QPainter, QPen, QColor, QFont
+from PySide6.QtCore      import Qt, QRect
 from SudokuEnums         import SkColor
 import json
 
+
 class SudokuWidget(QWidget):
+
+    
     def __init__(self, parent):
         super().__init__(parent)
+    
+    
         self.sudoku = parent.sudoku
         self.sudoku.generate_sudoku()
-        self.sudoku.set_difficulty("Medium")
+        self.sudoku.set_difficulty("Test")
         self.setMinimumSize(400,400)
         self.setAutoFillBackground(True)
 
@@ -20,9 +25,10 @@ class SudokuWidget(QWidget):
         self.font = QFont()
         self.font.setFamilies(['Arial', 'Helvetica', 'Sans-serif'])  
 
-        self.focus_cell = None  # Keeping track of selected cell
+        self.focus_cell = None  
 
-        self.setFocusPolicy(Qt.StrongFocus) # Letting keyPressEvent work
+        # Letting keyPressEvent work
+        self.setFocusPolicy(Qt.StrongFocus) 
 
 
     def paintEvent(self, event):
@@ -66,22 +72,22 @@ class SudokuWidget(QWidget):
 
 
     def save_game(self):
-
         game_data = {
             'sudoku': self.sudoku.sudoku,
-            'statuses': self.sudoku.statuses,
+            'statuses': [[status.name for status in row] for row in self.sudoku.statuses],
             'difficulty': self.sudoku.difficulty,
             'lives': self.sudoku.lives,
             'focus_cell': self.focus_cell
         }
-        with open('sudoku_save.json', 'w') as f:
-            json.dump(game_data, f)
+        with open('sudoku_save.json', 'w') as sufile:
+            json.dump(game_data, sufile)
 
     def load_game(self):
         try:
-            with open('sudoku_save.json', 'r') as f:
-                game_data = json.load(f)
+            with open('sudoku_save.json', 'r') as sufile:
+                game_data = json.load(sufile)
                 self.sudoku.sudoku = game_data['sudoku']
+                self.sudoku.statuses = [[SkColor[status] for status in row] for row in game_data['statuses']]
                 self.sudoku.statuses = game_data['statuses']
                 self.sudoku.difficulty = game_data['difficulty']
                 self.sudoku.lives = game_data['lives']
@@ -134,10 +140,10 @@ class SudokuWidget(QWidget):
             self.sudoku.update_statuses(row, col, number)
             if not self.sudoku.is_number_correct(row, col, number):
                 self.sudoku.on_life_lost()
+
+            self.sudoku.check_win()
+
             self.update()
-                        
-            # self.color_updater()
-                    
-            # if self.sudoku.check_win():
-            #     self.game_updater.emit(Game_Statuses.VICTORY)
+
+
 

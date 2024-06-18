@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from PySide6.QtWidgets import QApplication, QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout, QSizePolicy, QFontComboBox
-from PySide6.QtGui     import QKeyEvent, QPainter, QPen, QColor, QFont, QPalette, QBrush
-from PySide6.QtCore    import Qt, Signal, Slot
+from PySide6.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel, QPushButton, QGridLayout, QSizePolicy, QFontComboBox
+from PySide6.QtGui     import QKeyEvent, QFont
+from PySide6.QtCore    import Qt, Slot
 from SudokuLogic       import Sudoku 
 from SudokuTable       import SudokuWidget
 from SudokuEnums       import Game_Statuses
@@ -31,8 +31,9 @@ class MainWindow(QMainWindow):
         self.table.load_game()
 
         # Connecting lives system from Sudoku to lives and gamestatus label.
-        self.sudoku.lost_all_lives.connect(self.label_updater)
         self.sudoku.lost_one_life.connect(self.life_label_setter)
+        self.sudoku.lost_all_lives.connect(self.label_updater)
+        self.sudoku.sudoku_completed.connect(self.label_updater)
         
         # Initializing the right sidebar widget
         right_sidebar_widget = QWidget()
@@ -112,7 +113,7 @@ class MainWindow(QMainWindow):
 
         # Updates the lives display and current game status
         self.life_label_setter(self.sudoku.lives)
-        self.label_updater(Game_Statuses.STATIS)
+        self.label_updater(Game_Statuses.IN_GAME)
 
         # Clears table colors 
         self.table.focus_cell = None
@@ -121,13 +122,13 @@ class MainWindow(QMainWindow):
     @Slot(Game_Statuses)
     def label_updater(self, status: Game_Statuses):
         match status:
-            case Game_Statuses.STATIS:
+            case Game_Statuses.IN_GAME:
                 self.game_label.setText("")
                 
-            case Game_Statuses.DEFEAT:
+            case Game_Statuses.LOST:
                 self.game_label.setText("You lost!")
 
-            case Game_Statuses.VICTORY:
+            case Game_Statuses.COMPLETED:
                 self.game_label.setText("You win!")
                 
     @Slot()

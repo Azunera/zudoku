@@ -6,6 +6,6 @@ class SkColor(enum.Enum):
     RED     = 2
     
 class Game_Statuses(enum.Enum):
-    STATIS  = 0
-    DEFEAT  = 1
-    VICTORY = 2
+    IN_GAME    = 0
+    LOST       = 1
+    COMPLETED  = 2
