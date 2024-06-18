@@ -4,10 +4,12 @@ from PySide6.QtGui     import QKeyEvent, QFont
 from PySide6.QtCore    import Qt, Slot
 from SudokuLogic       import Sudoku 
 from SudokuTable       import SudokuWidget
-from SudokuEnums       import Game_Statuses
+from SudokuEnums       import Game_Statuses, SkColor
 from functools         import partial
 from SudokuWidgets     import DifficultyButton
+from enum              import Enum
 import sys
+import json
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -27,8 +29,9 @@ class MainWindow(QMainWindow):
         self.table  = SudokuWidget(self)
         main_layout.addWidget(self.table, 0, 0)
 
-        # Load game data if available
-        self.table.load_game()
+       # Load game data if available
+        self.load_game()
+
 
         # Connecting lives system from Sudoku to lives and gamestatus label.
         self.sudoku.lost_one_life.connect(self.life_label_setter)
@@ -40,9 +43,9 @@ class MainWindow(QMainWindow):
         right_sidebar_layout = QVBoxLayout(right_sidebar_widget)
 
         # Difficulties buttons
-        easy_button = DifficultyButton('Easy', 'Cyan')
-        medium_button = DifficultyButton('Medium', 'Yellow')
-        hard_button = DifficultyButton('Hard', 'Red')
+        easy_button = DifficultyButton('Easy', SkColor.EASY_GREEN)
+        medium_button = DifficultyButton('Medium', SkColor.MEDIUM_ORANGE)
+        hard_button = DifficultyButton('Hard', SkColor.HARD_RED)
         
         right_sidebar_layout.addWidget(easy_button)
         right_sidebar_layout.addWidget(medium_button)
@@ -82,18 +85,17 @@ class MainWindow(QMainWindow):
         right_sidebar_layout.addWidget(number_button_widget)
 
         # Font changer
-        font_changer = QFontComboBox()
-        font_changer.currentFontChanged.connect(self.font_changed)
-        right_sidebar_layout.addWidget(font_changer)
+        self.font_changer = QFontComboBox()
+        self.font_changer.currentFontChanged.connect(self.font_changed)
+        right_sidebar_layout.addWidget(self.font_changer)
 
         # Set the right sidebar widget as the layout for the central widget
         main_layout.addWidget(right_sidebar_widget, 0, 1, alignment=Qt.AlignTop)
 
         self.setMinimumSize(1, 1)
         
-
     def closeEvent(self, event):
-        self.table.save_game()
+        self.save_game()
         super().closeEvent(event)
         
     def numbers_pressed(self, number):
@@ -134,7 +136,37 @@ class MainWindow(QMainWindow):
     @Slot()
     def life_label_setter(self, lives):
         self.lives_label.setText("lives left " + str(lives))
-        
+
+
+    def save_game(self):
+        game_data = {
+            'sudoku': self.sudoku.sudoku,
+            'solution': self.sudoku.solution,
+            'statuses': [[[color.value for color in row] for row in column] for column in self.sudoku.statuses],
+            'difficulty': self.sudoku.difficulty,
+            'lives': self.sudoku.lives,
+            'focus_cell': self.table.focus_cell
+        }
+        with open('sudoku_save.json', 'w') as sufile:
+            json.dump(game_data, sufile)
+
+    def load_game(self):
+        try:
+            with open('sudoku_save.json', 'r') as sufile:
+                game_data = json.load(sufile)
+                
+                self.sudoku.sudoku = game_data['sudoku']
+                self.sudoku.solution = game_data.get('solution', None)
+                self.sudoku.statuses = [[[SkColor(*rgb) for rgb in row] for row in column] for column in game_data['statuses']]
+                self.sudoku.difficulty = game_data['difficulty']
+                self.sudoku.lives = game_data['lives']
+                self.focus_cell = game_data['focus_cell'] if game_data['focus_cell'] else None
+                
+                self.update()  # Ensure the UI updates after loading
+        except:
+            pass
+
+
 if __name__ == "__main__": 
     app = QApplication(sys.argv) 
     window = MainWindow() 

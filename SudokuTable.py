@@ -2,7 +2,7 @@ from PySide6.QtWidgets   import QWidget
 from PySide6.QtGui       import QPainter, QPen, QColor, QFont
 from PySide6.QtCore      import Qt, QRect
 from SudokuEnums         import SkColor
-import json
+
 
 
 class SudokuWidget(QWidget):
@@ -55,66 +55,79 @@ class SudokuWidget(QWidget):
             painter.drawLine(0, i * cell_size, cell_size * 9, i * cell_size)
             painter.drawLine(i * cell_size, 0, i * cell_size, cell_size * 9)
 
-
     def draw_numbers_and_colors(self, painter, cell_size, pen):
         self.font.setPointSize(cell_size / 2.2)
         painter.setFont(self.font)
-       
+    
         for row in range(9):
             for col in range(9):
                 if self.sudoku.sudoku[row][col] != " ":
-                    rect = QRect(col * cell_size+1, row * cell_size+1, cell_size-1, cell_size-1)
-                    if self.sudoku.statuses[row][col] == SkColor.RED:
-                        painter.fillRect(rect, QColor(255, 200, 200))  
-                    elif self.sudoku.statuses[row][col] == SkColor.WHITE:
-                        painter.fillRect(rect, QColor(255, 255, 255)) 
+                    rect = QRect(col * cell_size + 1, row * cell_size + 1, cell_size - 1, cell_size - 1)
+                    
+                    # Painting the background 
+                    if self.sudoku.statuses[row][col][0] == SkColor.RED:
+                        painter.fillRect(rect, QColor(*SkColor.RED.value))
+                    elif self.sudoku.statuses[row][col][0] == SkColor.WHITE:
+                        painter.fillRect(rect, QColor(*SkColor.WHITE.value))
+                    # elif self.sudoku.statuses[row][col][0] == SkColor.FOCUS_BLUE:
+                    #     painter.fillRect(rect, QColor(*SkColor.FOCUS_BLUE.value))
+                    # elif self.sudoku.statuses[row][col][0] == SkColor.CROSS_BLUE:
+                    #     painter.fillRect(rect, QColor(*SkColor.CROSS_BLUE.value))
+                        
+                    # Set the text color
+                    if self.sudoku.statuses[row][col][1] == SkColor.WRONG_RED:
+                        painter.setPen(QPen(QColor(*SkColor.WRONG_RED.value)))
+                    elif self.sudoku.statuses[row][col][1] == SkColor.CORRECT_BLUE:
+                        painter.setPen(QPen(QColor(*SkColor.CORRECT_BLUE.value)))
+                    else:
+                        painter.setPen(QPen(Qt.black))  # Default text color
+                        
+                    # Finally drawing the number
                     painter.drawText(rect, Qt.AlignCenter, str(self.sudoku.sudoku[row][col]))
 
 
-    def save_game(self):
-        game_data = {
-            'sudoku': self.sudoku.sudoku,
-            'statuses': [[status.name for status in row] for row in self.sudoku.statuses],
-            'difficulty': self.sudoku.difficulty,
-            'lives': self.sudoku.lives,
-            'focus_cell': self.focus_cell
-        }
-        with open('sudoku_save.json', 'w') as sufile:
-            json.dump(game_data, sufile)
 
-    def load_game(self):
-        try:
-            with open('sudoku_save.json', 'r') as sufile:
-                game_data = json.load(sufile)
-                self.sudoku.sudoku = game_data['sudoku']
-                self.sudoku.statuses = [[SkColor[status] for status in row] for row in game_data['statuses']]
-                self.sudoku.statuses = game_data['statuses']
-                self.sudoku.difficulty = game_data['difficulty']
-                self.sudoku.lives = game_data['lives']
-                self.focus_cell = tuple(game_data['focus_cell']) if game_data['focus_cell'] else None
-                self.update()
-        except:
-            pass  # No saved game file found
 
     def highlight_focus_cell(self):
-        row, col = self.focus_cell
+        if not self.focus_cell:
+            return
+        try:
+            row, col = self.focus_cell
+        except: # Skips if doens't exist
+            pass
+        # Only check if the cell has focus and if the number is correct or not
         if self.sudoku.is_number_correct(row, col, self.sudoku.sudoku[row][col]) or not self.sudoku.lives:
             return
-        if self.focus_cell:
-            painter = QPainter(self)
+
+        painter = QPainter(self)
+        cell_size = min(self.width(), self.height()) // 9
+        self.font.setPointSize(cell_size / 2.2)
+        
+        # Defining the highlighting function
+        def highlight_cell(row, col, color: SkColor):
             cell_size = min(self.width(), self.height()) // 9
-            row, col = self.focus_cell
-            rect = QRect(col * cell_size+1, row * cell_size+1, cell_size-1.5, cell_size-1)
-            # Fill the selected cell with a blue color
-            painter.fillRect(rect, QColor(200, 200, 255))  # Light blue background
+        
+            rect = QRect(col * cell_size + 1, row * cell_size + 1, cell_size - 1, cell_size - 1)
+
+            if self.sudoku.statuses[row][col][0] != SkColor.RED or color == SkColor.FOCUS_BLUE:
+                painter.fillRect(rect, QColor(*color.value))
 
             # Redraw the number in the cell if it exists
             if self.sudoku.sudoku[row][col] != " ":
                 self.font.setPointSize(cell_size / 2.2)
                 painter.setFont(self.font)
-                painter.setPen(QPen(Qt.black, 2, Qt.SolidLine))
+                pen_color = self.sudoku.statuses[row][col][1].value
+                painter.setPen(QPen(QColor(*pen_color), 2, Qt.SolidLine))
                 painter.drawText(rect, Qt.AlignCenter, str(self.sudoku.sudoku[row][col]))
-                
+
+        # Applying it to the desired cells, order matters! 
+        for new in range(9):
+                highlight_cell(row, new, SkColor.CROSS_BLUE)
+                highlight_cell(new, col, SkColor.CROSS_BLUE)
+        
+        highlight_cell(row, col, SkColor.FOCUS_BLUE)
+
+            
     def update_sudoku(self):
         self.update()
         
@@ -139,7 +152,10 @@ class SudokuWidget(QWidget):
             # Attempts to find wrong numbers for then highlighthem   
             self.sudoku.update_statuses(row, col, number)
             if not self.sudoku.is_number_correct(row, col, number):
+                self.sudoku.statuses[row][col][1] = SkColor.WRONG_RED
                 self.sudoku.on_life_lost()
+            else:
+                self.sudoku.statuses[row][col][1] = SkColor.CORRECT_BLUE
 
             self.sudoku.check_win()
 

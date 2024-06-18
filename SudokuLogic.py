@@ -15,7 +15,7 @@ class Sudoku(QObject):
         super().__init__(parent)
         self.parent = parent
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
-        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
+        self.statuses = [[[SkColor.WHITE, SkColor.BLACK] for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
         self.o_sudoku = None
         self.difficulty = None 
         self.wrongs = []
@@ -130,7 +130,7 @@ class Sudoku(QObject):
                     t+=1     
                     
         self.solution = deepcopy(self.sudoku)
-        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)] 
+        self.statuses = [[[SkColor.WHITE, SkColor.BLACK] for _ in range(9)] for _ in range(9)] 
         
     def set_difficulty(self, difficulty):
         """
@@ -188,7 +188,7 @@ class Sudoku(QObject):
 
             if self.sudoku[x][y] == number:
                 self.sudoku[x][y] = " "
-                self.statuses[x][y] = 1
+                self.statuses[x][y] = [SkColor.WHITE, SkColor.BLACK]
             else: 
                 self.sudoku[x][y] = number
    
@@ -234,11 +234,13 @@ class Sudoku(QObject):
                                 wrong_cords.add((actual_x, actual_y))
                                 
                                
-        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]
-        
-        # Updates the current grid colors data in logic      
+        for x in range(9):
+            for y in range(9):
+                self.statuses[x][y][0] = SkColor.WHITE      
+        # Updates the current grid colors data in logic 
+             
         for nums in wrong_cords:
-            self.statuses[nums[0]][nums[1]] = SkColor.RED
+            self.statuses[nums[0]][nums[1]][0] = SkColor.RED
             
 
 
@@ -297,9 +299,10 @@ I  \033[1m|\033[0m {self.sudoku[8][0]} | {self.sudoku[8][1]} | {self.sudoku[8][2
    \033[1m+---+---+---+---+---+---+---+---+---+\033[0m ''')
     
         
-if __name__ == "__main__":
-    sudoku = Sudoku()
-    sudoku.generate_sudoku()
-    sudoku.print_sudoku
+# if __name__ == "__main__":
+    
+#     sudoku = Sudoku()
+#     sudoku.generate_sudoku()
+#     sudoku.print_sudoku()
 
 
