@@ -167,7 +167,6 @@ class MainWindow(QMainWindow):
                 self.sudoku.lives = game_data['lives']
                 self.focus_cell = game_data['focus_cell'] if game_data['focus_cell'] else None
                 
-                print(self.sudoku.statuses)
                 self.update() 
         except:
             pass
