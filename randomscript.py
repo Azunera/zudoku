@@ -22,9 +22,9 @@ except Exception as Ex:
     print(Ex) 
     
 try:
-    cur.execute("""CREATE TABLE movies(
-        title TEXT PRIMARY KEY, 
-        year INT NOT NULL, 
+    cur.execute("""CREATE TABLE zudoku(
+        id INT PRIMARY KEY AUTOINCREMENT
+        sudoku , 
         score REAL NOT NULL, 
         rented_by INT,
         FOREIGN KEY(rented_by) REFERENCES users(id)) strict

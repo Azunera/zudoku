@@ -127,7 +127,8 @@ class SudokuWidget(QWidget):
         
         highlight_cell(row, col, SkColor.FOCUS_BLUE)
 
-            
+        self.update_sudoku()
+        self.update()
     def update_sudoku(self):
         self.update()
         

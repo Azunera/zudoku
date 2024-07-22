@@ -120,6 +120,7 @@ class MainWindow(QMainWindow):
 
         # Clears table colors 
         self.table.focus_cell = None
+        
         self.table.update()
         
     @Slot(Game_Statuses)
