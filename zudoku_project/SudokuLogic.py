@@ -1,27 +1,27 @@
 # REMOVE SIGNAL AND INSTEAD YK
 
-from random import randrange, shuffle, choice, sample
-from time import sleep
+from random import shuffle, sample
 from copy import deepcopy
 from enum import Enum
 from PySide6.QtCore import QObject, Signal
 from SudokuEnums import SkColor, Game_Statuses
 
 class Sudoku(QObject):
-    lost_all_lives  = Signal(Enum) 
     lost_one_life   = Signal(int)
+    lost_all_lives  = Signal(Enum)
+    sudoku_completed = Signal(Enum) 
+    
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
-        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
+        self.statuses = [[[SkColor.WHITE, SkColor.BLACK] for _ in range(9)] for _ in range(9)]  # Grid to store cell statuses
         self.o_sudoku = None
         self.difficulty = None 
         self.wrongs = []
         self.solution = None
         self.lives = 5
         
-
     def check(self):
         """
         Checks the validity of the Sudoku board.
@@ -40,101 +40,108 @@ class Sudoku(QObject):
                         if group.count(number) > 1:
                             return False
         return True
-
+    
     def on_life_lost(self):
         self.lives -= 1
         self.lost_one_life.emit(self.lives)
 
         if self.lives == 0:
-            self.lost_all_lives.emit(Game_Statuses.DEFEAT)   
-
-    def generate_sudoku(self):
-        """
-        Generate a complete nnew random Sudoku board from zero, 
-
-        Updates:
-            self.sudoku = A new generated sudoku (prepared to be adjusted according difficulty)
-            self.solution = A new generated sudoku
-            self.statuses = Resets them to standard status
-        """
+            self.lost_all_lives.emit(Game_Statuses.LOST)   
+            
+    def generate_full_board(self):
         self.sudoku = [[" " for _ in range(9)] for _ in range(9)]
-        hisd= ""
-        n= 1
-        r= -1
-        t=1
-        history=[]
-        blacklist={}
-        while n<10:
-            r += 1
-            if r >8:
-                n += 1
-                r = 0
-            ii = True
-            g = True
-            if n==10: 
-                break
         
-            while g:
-                # print("Current state of the self.sudoku:")
-                # printsudoku()e
-                # print("Trying to fill number", n, "at row", r)
-                indexes= "012345678"
-                try:
-                    for el in blacklist[str(t)]:
-                        for e in el:
+        numbers =  [str(i) for i in range(1, 10)]
+        shuffle(numbers) 
+        self.fill_board(self.sudoku, numbers)
 
-                            indexes= indexes.replace(e,"")
-                except:
-                        pass
-                        
-                indexes= [int(e) for e in indexes]
-                shuffle(indexes)
-                for i in indexes:
-                    if self.sudoku[r][i] == " ":
-                        self.sudoku[r][i] = str(n)
-                        # print("Attempting to fill cell (", r, ",", i, ") with number", n)
-                        if self.check():
-                            # print("Valid configuration so far:")
-                            # printsudoku()
-                            g = False
-                            ii = False
-                            break
-                        else:
-                            # print("Invalid configuration. Clearing cell (", r, ",", i, ")")
-                            self.sudoku[r][i] = " "
+    def fill_board(self, board, numbers):
+        empty = self.find_empty(board)
+        if not empty:
+            return True
+        row, col = empty
 
-                if ii:
-                    # retracing, 
-                    try:
-                        del blacklist[str(t)]
-                    except:
-                        pass
-                    t-= 1
-                    hisd= history[-1][2]
-                    self.sudoku[int(history[-1][0])][int(hisd)] = " "
-                    try:
-                        if hisd not in blacklist[str(t)]:
-                            blacklist[str(t)] += (hisd,)
-                    except:
-                        blacklist[str(t)] = (hisd,)                   
-                    del history[-1]
-                
-                    r -= 1
-                    if r < 0:
-                        r = 8
-                        n -= 1
-                    
-                else:
-                    history.append(f'{r}:{i}:{t}')
-                    t+=1     
-                    
-        self.solution = deepcopy(self.sudoku)
-        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)] 
-        
-    def set_difficulty(self, difficulty):
+        for num in numbers:
+            if self.is_valid(board, num, (row, col)):
+                board[row][col] = num
+                if self.fill_board(board, numbers):
+                    return True
+                board[row][col] = " "
+        return False
+
+    # Solver with backtracking for a given board
+    def solve(self, board):
+        empty = self.find_empty(board)
+        if not empty:
+            return True
+        row, col = empty
+
+        for num in map(str, range(1, 10)):
+            if self.is_valid(board, num, (row, col)):
+                board[row][col] = num
+                if self.solve(board):
+                    return True
+                board[row][col] = " "
+        return False
+
+    # Check if a number can be placed in a cell
+    def is_valid(self, board, num, pos):
+        row, col = pos
+
+        # Check row
+        if num in board[row]:
+            return False
+        # Check column
+        if num in [board[row][col] for row in range(9)]:
+            return False
+        # Check box
+        box_x, box_y = col // 3, row // 3
+        for x in range(box_y * 3, box_y * 3 + 3):
+            for y in range(box_x * 3, box_x * 3 + 3):
+                if board[x][y] == num:
+                    return False
+        return True
+
+    # Find an empty space on the board
+    def find_empty(self, board):
+        for x in range(9):
+            for y in range(9):
+                if board[x][y] == " ":
+                    return (x, y)
+        return None
+
+    # Check if the puzzle has a unique solution by trying to solve it twice
+    def has_unique_solution(self, board):
+        board_copy = deepcopy(board)
+        solutions = self.solve_multiple(board_copy, max_solutions=2)
+        return solutions == 1
+
+    # A solver that counts solutions up to a certain limit
+    def solve_multiple(self, board, max_solutions):
+        empty = self.find_empty(board)
+        if not empty:
+            return 1
+        row, col = empty
+        solutions = 0
+
+        for num in map(str, range(1, 10)):
+            if self.is_valid(board, num, (row, col)):
+                board[row][col] = num
+                solutions += self.solve_multiple(board, max_solutions)
+                board[row][col] = " "
+                if solutions >= max_solutions:
+                    return solutions
+        return solutions
+    # Attempts to remove cells until only the desired number of hints remain
+   
+# Usage
+# sudoku = Sudoku()
+# sudoku.make_unique_puzzle(hints=25)   # Try to make a puzzle with exactly 17 hints
+  
+    def generate_sudoku(self, difficulty='Medium', hints=None):
         """
         Set the difficulty of the Sudoku puzzle by removing a certain number of cells.
-
+  
         Args:
             difficulty (str): The difficulty level ('Easy', 'Medium', 'Hard').
 
@@ -144,39 +151,59 @@ class Sudoku(QObject):
         Raises:
             Exception: If an invalid difficulty level is provided.
         """
-        if difficulty.capitalize() not in ("Easy", "Medium", "Hard", "Test"):
-            raise Exception("Invalid difficulty")
 
-        if difficulty == 'Easy':
-            empty_cells = 40
-            self.lives = 15
-        elif difficulty == 'Medium':
-            empty_cells = 50
-            self.lives = 10
-        else:  # 'Hard'
-            empty_cells = 60
-            self.lives = 5
+        if not(hints):
+            if difficulty.capitalize() not in ("Easy", "Medium", "Hard", "Test"):
+                raise Exception("Invalid difficulty")
             
-        if difficulty == "Test":
-            empty_cells = 1
+            dif_index = ("Easy", "Medium", "Hard", "Evil", "Test").index(difficulty)
             
-        selected_positions = set() 
+            hints = 39 - 5 * dif_index
+            self.lives = 4 + 2 * dif_index
+            
+            if dif_index == 4:
+                hints = 80
+                self.lives = 10
+            
+        else:
+            hints = hints
+            self.lives = 6
 
-        cells_with_numbers = [(row, col) for row in range(9) for col in range(9) if self.sudoku[row][col] != " "]
+        attempts = 5  
+        for attempt in range(attempts):
+            self.generate_full_board()
+            self.solution = deepcopy(self.sudoku)
 
-        while len(selected_positions) < empty_cells:
-            row, col = sample(cells_with_numbers, 1)[0]
+            cells = [(x, y) for x in range(9) for y in range(9)]
+            shuffle(cells)
+            filled_cells = 81
 
-            if (row, col) not in selected_positions:
-                selected_positions.add((row, col))
+            for row, col in cells:
+                if filled_cells <= hints:
+                    break
+                backup = self.sudoku[row][col]
                 self.sudoku[row][col] = " "
-            
+
+                if not self.has_unique_solution(self.sudoku):
+                    self.sudoku[row][col] = backup  # Restore if not unique
+                else:
+                    filled_cells -= 1
+
+            # If we reach the target number of hints, stop
+            if filled_cells == hints:
+                break
+        else:
+            print("Could not reach the target hints; generated closest possible.")
+
+        self.statuses = [[[SkColor.WHITE, SkColor.BLACK] for _ in range(9)] for _ in range(9)] 
+        
         return self.sudoku
 
     def set_number(self, x, y, number):
+        print(self.sudoku)
         """
         Set a number in the Sudoku board at the given position if the number isn't the correct one.
-4
+
         Args:
             number (str): The number to set in the board.
             x (int): The row index.
@@ -186,10 +213,10 @@ class Sudoku(QObject):
 
             if self.sudoku[x][y] == number:
                 self.sudoku[x][y] = " "
-                self.statuses[x][y] = 1
+                self.statuses[x][y] = [SkColor.WHITE, SkColor.BLACK]
             else: 
                 self.sudoku[x][y] = number
-   
+
     def update_statuses(self, x, y, number):
         """
         Finds coordinates of conflicting numbers on the Sudoku board.
@@ -232,13 +259,31 @@ class Sudoku(QObject):
                                 wrong_cords.add((actual_x, actual_y))
                                 
                                
-        self.statuses = [[SkColor.WHITE for _ in range(9)] for _ in range(9)]
-        
-        # Updates the current grid colors data in logic      
+        for x in range(9):
+            for y in range(9):
+                self.statuses[x][y][0] = SkColor.WHITE      
+        # Updates the current grid colors data in logic 
+             
         for nums in wrong_cords:
-            self.statuses[nums[0]][nums[1]] = SkColor.RED
+            self.statuses[nums[0]][nums[1]][0] = SkColor.RED
             
 
+    def is_number_valid(self, board, num, pos):
+        row, col = pos
+
+        # Check row
+        if num in board[row]:
+            return False
+        # Check column
+        if num in [board[i][col] for i in range(9)]:
+            return False
+        # Check box
+        box_x, box_y = col // 3, row // 3
+        for i in range(box_y * 3, box_y * 3 + 3):
+            for j in range(box_x * 3, box_x * 3 + 3):
+                if board[i][j] == num:
+                    return False
+        return True
 
     def is_number_correct(self, x, y, number):
         """
@@ -267,6 +312,8 @@ class Sudoku(QObject):
             for y in range(9):
                 if self.sudoku[x][y] != self.solution[x][y]:
                     return False
+                
+        self.sudoku_completed.emit(Game_Statuses.COMPLETED)
         return True
 
     def print_sudoku(self):
@@ -296,7 +343,7 @@ I  \033[1m|\033[0m {self.sudoku[8][0]} | {self.sudoku[8][1]} | {self.sudoku[8][2
         
 if __name__ == "__main__":
     sudoku = Sudoku()
-    sudoku.generate_sudoku()
+    sudoku.generate_sudoku(difficulty='Medium')
     sudoku.print_sudoku
 
 

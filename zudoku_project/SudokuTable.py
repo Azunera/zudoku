@@ -1,146 +1,166 @@
-from PySide6.QtWidgets import QApplication, QTableWidget, QTableWidgetItem
-from PySide6.QtGui     import QKeyEvent, QFont, QBrush, QColor
-from PySide6.QtCore    import Qt, Signal, Slot
-from SudokuLogic       import Sudoku
-from SudokuCell        import SudokuItem
-from SudokuEnums       import Game_Statuses, SkColor
-from enum              import Enum
-import sys
+from PySide6.QtWidgets   import QWidget
+from PySide6.QtGui       import QPainter, QPen, QColor, QFont
+from PySide6.QtCore      import Qt, QRect
+from SudokuEnums         import SkColor
 
-class SudokuTable(QTableWidget):
 
-    def __init__(self, rows, columns, parent=None):
-        super().__init__(rows, columns, parent)
-        self.focus_cell = None
-        self.focus_xy = None
+
+class SudokuWidget(QWidget):
+
+    
+    def __init__(self, parent):
+        super().__init__(parent)
+    
+    
         self.sudoku = parent.sudoku
-        self.colors = SkColor
-        self.sudoku.generate_sudoku()
-        self.sudoku.set_difficulty("Test")
-        self.game = Game_Statuses
-        self.font = QFont("Arial", 17)
-        self.initUI()
-        self.playable = True
+        self.sudoku.generate_sudoku('Medium')
+        self.setMinimumSize(400,400)
+        self.setAutoFillBackground(True)
 
-    def initUI(self):
-        self.setFixedSize(450, 450)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.horizontalHeader().setVisible(False)
-        self.verticalHeader().setVisible(False)
-        self.horizontalHeader().setDefaultSectionSize(50)
-        self.verticalHeader().setDefaultSectionSize(50)
-        self.setStyleSheet("QTableWidget { background-color: white; gridline-color: lightgray; }")
-        
-        # Setting for the first itme the sudoku items and its numbers
-        for x in range(9):
-            for y in range(9):
-                item = SudokuItem("", x, y)
-                item.set_number(self.sudoku.sudoku[x][y])
-                item.setFont(self.font)
-                self.setItem(x, y, item)
+        palette = self.palette()
+        palette.setColor(self.backgroundRole(), Qt.white)
+        self.setPalette(palette)
 
-    def update_table_number(self, x, y):
-        item = self.item(x, y)
-        item.set_number(self.sudoku.sudoku[x][y])
-        
-        # Update colors based on status
-        status = self.sudoku.statuses[x][y]
-        item.set_background_color(status)
+        self.font = QFont()
+        self.font.setFamilies(['Arial', 'Helvetica', 'Sans-serif'])  
 
+        self.focus_cell = None  
+
+        # Letting keyPressEvent work
+        self.setFocusPolicy(Qt.StrongFocus) 
+
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        cell_size = min(self.width(), self.height()) // 9
+        pen = QPen(Qt.black, 2, Qt.SolidLine)
+        painter.setPen(pen)
+
+        self.draw_numbers_and_colors(painter, cell_size, pen)
+        self.draw_grid(painter, cell_size, pen)
+
+        if self.focus_cell:
+            self.highlight_focus_cell()
+
+
+    def draw_grid(self, painter, cell_size, pen):
+        for i in range(10):
+            if i % 3 == 0:
+                pen.setWidth(2)
+            else:
+                pen.setWidth(1)
+            painter.setPen(pen)
+           
+            painter.drawLine(0, i * cell_size, cell_size * 9, i * cell_size)
+            painter.drawLine(i * cell_size, 0, i * cell_size, cell_size * 9)
+
+    def draw_numbers_and_colors(self, painter, cell_size, pen):
+        self.font.setPointSize(cell_size / 2.2)
+        painter.setFont(self.font)
     
-    
-    def update_table_font(self):
-        '''Updates the fonts of all the numbers on the table'''
-        for x in range(9):
-            for y in range(9):
-                item = self.item(x, y)
-                if item is not None:
-                    item.setFont(self.font)
+        for row in range(9):
+            for col in range(9):
+                if self.sudoku.sudoku[row][col] != " ":
+                    rect = QRect(col * cell_size + 1, row * cell_size + 1, cell_size - 1, cell_size - 1)
+                    
+                    # Painting the background 
+                    if self.sudoku.statuses[row][col][0] == SkColor.RED:
+                        painter.fillRect(rect, QColor(*SkColor.RED.value))
+                    elif self.sudoku.statuses[row][col][0] == SkColor.WHITE:
+                        painter.fillRect(rect, QColor(*SkColor.WHITE.value))
+  
+                    # Set the text color
+                    if self.sudoku.statuses[row][col][1] == SkColor.WRONG_RED:
+                        painter.setPen(QPen(QColor(*SkColor.WRONG_RED.value)))
+                    elif self.sudoku.statuses[row][col][1] == SkColor.CORRECT_BLUE:
+                        painter.setPen(QPen(QColor(*SkColor.CORRECT_BLUE.value)))
+                    else:
+                        painter.setPen(QPen(Qt.black))  # Default text color
+                        
+                    # Finally drawing the number
+                    painter.drawText(rect, Qt.AlignCenter, str(self.sudoku.sudoku[row][col]))
 
-    def update_table(self):
-        '''Updates all numbers on table with new numbers'''
-        for x in range(9):
-            for y in range(9):
-                item = self.item(x, y)
-                item.set_number(self.sudoku.sudoku[x][y])
-                status = self.sudoku.statuses[x][y]
-                item.set_background_color(status)
 
-    def handleCellClicked(self, row, column):
-        if self.sudoku.lives:
-            try:
-                self.focus_cell.set_background_color(SkColor.WHITE)
-            except: 
-                pass
-            
-            self.focus_cell = self.item(row, column)
-            
-            if not self.sudoku.is_number_correct(row, column, self.focus_cell.text()):
-                self.sudoku.statuses[row][column] = SkColor.RED
-                self.focus_cell.set_background_color(self.colors.BLUE)
 
-    def mouseDoubleClickEvent(self, event):
-        event.ignore()
 
-    def mousePressEvent(self, event):
-        event.ignore()
-        # Calculating cell location
-        x = event.position().toPoint().y() // self.rowHeight(0)
-        y = event.position().toPoint().x() // self.columnWidth(0)
-        
-        self.handleCellClicked(x, y)
-
-    def mouseMoveEvent(self, event):
-        event.ignore()
-            
-    def color_updater(self):
-        '''Updates the colors of the sudoku cells'''
-        for x in range(9):
-            for y in range(9):
-                self.item(x, y).set_background_color(self.sudoku.statuses[x][y])
-                
-        if self.sudoku.statuses[self.focus_cell.x][self.focus_cell.y] == SkColor.WHITE:
-            self.item(self.focus_cell.x, self.focus_cell.y).set_background_color(SkColor.BLUE)
-            
-    def keyPressEvent(self, event: QKeyEvent) -> None:
-        event.ignore()
-        if not self.focus_cell or self.sudoku.is_number_correct(self.focus_cell.x, self.focus_cell.y, self.focus_cell.text()) or not self.sudoku.lives:
+    def highlight_focus_cell(self):
+        if not self.focus_cell:
+            return
+        try:
+            row, col = self.focus_cell
+        except: # Skips if doens't exist
+            pass
+        # Only check if the cell has focus and if the number is correct or not
+        if self.sudoku.is_number_correct(row, col, self.sudoku.sudoku[row][col]) or not self.sudoku.lives:
             return
 
-        key = event.text()
+        painter = QPainter(self)
+        cell_size = min(self.width(), self.height()) // 9
+        self.font.setPointSize(cell_size / 2.2)
         
-        if key.isdigit():
-            if self.focus_cell.text() == key:
-                pass
-            
-            # Setting the numbers in both the cell and sudoku logical grid.
-            self.sudoku.set_number(self.focus_cell.x, self.focus_cell.y, key)
-            self.focus_cell.set_number(key)
-            
-            # Attempts to find wrong numbers for then highlighthem   
-            self.sudoku.update_statuses(self.focus_cell.x, self.focus_cell.y, key)
-            if not self.sudoku.is_number_correct(self.focus_cell.x, self.focus_cell.y, key):
-                self.sudoku.on_life_lost()
-                
-            self.color_updater()
-            
-            
-            if self.sudoku.check_win():
-                self.game_updater.emit(Game_Statuses.VICTORY)
+        # Defining the highlighting function
+        def highlight_cell(row, col, color: SkColor):
+            cell_size = min(self.width(), self.height()) // 9
+        
+            rect = QRect(col * cell_size + 1, row * cell_size + 1, cell_size - 1, cell_size - 1)
 
-    
-    @Slot()
-    def playable_toggler(self, status):
-        '''
-        Sets the playability of the sudoku table. 
-        Arg:
-            status (bool): True for setting the table playable; False for turning it unplayable
-        '''
-        self.playable = status
+            if self.sudoku.statuses[row][col][0] != SkColor.RED or color == SkColor.FOCUS_BLUE:
+                painter.fillRect(rect, QColor(*color.value))
+
+            # Redraw the number in the cell if it exists
+            if self.sudoku.sudoku[row][col] != " ":
+                self.font.setPointSize(cell_size / 2.2)
+                painter.setFont(self.font)
+                pen_color = self.sudoku.statuses[row][col][1].value
+                painter.setPen(QPen(QColor(*pen_color), 2, Qt.SolidLine))
+                painter.drawText(rect, Qt.AlignCenter, str(self.sudoku.sudoku[row][col]))
+
+        # Applying it to the desired cells, order matters! 
+        for new in range(9):
+                highlight_cell(row, new, SkColor.CROSS_BLUE)
+                highlight_cell(new, col, SkColor.CROSS_BLUE)
         
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    table = SudokuTable(9, 9)
-    table.show()
-    sys.exit(app.exec())
+        highlight_cell(row, col, SkColor.FOCUS_BLUE)
+
+            
+    def update_sudoku(self):
+        self.update()
+        
+    def mousePressEvent(self, event):
+        cell_size = min(self.width(), self.height()) // 9
+        x = event.position().x() // cell_size
+        y = event.position().y() // cell_size
+        self.focus_cell = (int(y), int(x))
+        try:
+            self.update()
+        except Exception as ex:
+            print(ex)
+
+
+    def keyPressEvent(self, event):
+        if self.focus_cell is None:
+            return 
+        row, col = self.focus_cell
+            
+        if self.sudoku.is_number_correct(row, col, self.sudoku.sudoku[row][col]) or not self.sudoku.lives:
+            return
+
+        if event.text().isdigit() and event.text() != "0":
+            number = event.text()
+            row, col = self.focus_cell
+            self.sudoku.sudoku[row][col] = str(number) if number != self.sudoku.sudoku[row][col] else " "
+
+            # Attempts to find wrong numbers for then highlighthem   
+            self.sudoku.update_statuses(row, col, number)
+            if not self.sudoku.is_number_correct(row, col, number):
+                self.sudoku.statuses[row][col][1] = SkColor.WRONG_RED
+                self.sudoku.on_life_lost()
+            else:
+                self.sudoku.statuses[row][col][1] = SkColor.CORRECT_BLUE
+
+            self.sudoku.check_win()
+
+            self.update()
+
+
+
